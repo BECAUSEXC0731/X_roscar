@@ -13,8 +13,6 @@
 // 使用软件 SPI 构造函数：(cs, dc, mosi, sclk, rst)
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
 
-
-
 void St7735_Init() {
   Serial.println("Initializing ST7735 via Software SPI...");
 

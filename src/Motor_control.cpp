@@ -2,25 +2,33 @@
 #include <Esp32McpwmMotor.h>
 #include <Motor_control.h>
 
+
+
+//定义四个轮子
+
+
 #define MOTOR1_ID 1
-#define MOTOR1_IN1 5
-#define MOTOR1_IN2 6
-#define MOTOR1_PWM 4
+#define MOTOR1_IN1 7                            // 11111111             4444444444
+#define MOTOR1_IN2 15                           // 22222222             3333333333
+#define MOTOR1_PWM 16
 
 #define MOTOR2_ID 2
-#define MOTOR2_IN1 7  // 11111111             4444444444
-#define MOTOR2_IN2 15 // 22222222             3333333333
-#define MOTOR2_PWM 16
+#define MOTOR2_IN1 40
+#define MOTOR2_IN2 41
+#define MOTOR2_PWM 39
 
 #define MOTOR3_ID 3
-#define MOTOR3_IN1 40
-#define MOTOR3_IN2 41
-#define MOTOR3_PWM 39
+#define MOTOR3_IN1 2
+#define MOTOR3_IN2 42
+#define MOTOR3_PWM 1
+
 
 #define MOTOR4_ID 4
-#define MOTOR4_IN1 2
-#define MOTOR4_IN2 42
-#define MOTOR4_PWM 1
+#define MOTOR4_IN1 5
+#define MOTOR4_IN2 6
+#define MOTOR4_PWM 4
+
+
 
 void My_motor::Motor_Init(int ID, int turn)
 {
@@ -103,7 +111,7 @@ void My_motor::Motor_Run(int ID, float  pwm)
     float a = pwm * 0.01;
     if (pwm > 0)
     {
-
+        //设置电机的正反转
         if (ID == 1)
         {
             Motor_Init(1, 0);
@@ -111,13 +119,13 @@ void My_motor::Motor_Run(int ID, float  pwm)
         }
         if (ID == 2)
         {
-            Motor_Init(2, 1);
+            Motor_Init(2, 0);
             analogWrite(MOTOR2_PWM, int(255 * a));
         }
         if (
             ID == 3)
         {
-            Motor_Init(3, 1);
+            Motor_Init(3, 0);
             analogWrite(MOTOR3_PWM, int(255 * a));
         }
         if (ID == 4)
@@ -136,13 +144,13 @@ void My_motor::Motor_Run(int ID, float  pwm)
         }
         if (ID == 2)
         {
-            Motor_Init(2, 0);
+            Motor_Init(2, 1);
             analogWrite(MOTOR2_PWM, int(255 * a));
         }
         if (
             ID == 3)
         {
-            Motor_Init(3, 0);
+            Motor_Init(3, 1);
             analogWrite(MOTOR3_PWM, int(255 * a));
         }
         if (ID == 4)

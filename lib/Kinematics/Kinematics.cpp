@@ -6,7 +6,7 @@ extern float Velocity[4];
 int64_t last_time_K = 0;
 
 odom_t odom;                // 用于存储数据的结构体
-float wheel_distance = 235; // 单位mm 设置轮距---------------------------------------------------------------------------
+float wheel_distance = 165; // 单位mm 设置轮距---------------------------------------------------------------------------
 
 // 输出机人的角速度和线速度
 void Kinematics_up(float Motor1, float Motor3, float Motor4, float Motor2, float *out_angular_speed, float *out_linear_speed)
@@ -50,13 +50,13 @@ void odom_update()
     // 角度转换
     angle_trans(odom.angle, odom.angle);
 
-    // 计算机器人行走的距离
+    // 计算机器人行走的距离单位（m）
     float delt_distance = odom.linear_speed * dt_s;
-    odom.x = odom.x + delt_distance * cos(odom.angle);
-    odom.y = odom.y + delt_distance * sin(odom.angle);
+    odom.x = odom.x + delt_distance * cos(odom.angle)/1000;
+    odom.y = odom.y + delt_distance * sin(odom.angle)/1000;
     last_time_K = now_K;
 
-    // Serial.printf(  "x:%f,y:%f,angle:%f\n", odom.x, odom.y, odom.angle );
+     Serial.printf(  "x:%f,y:%f,angle:%f\n", odom.x, odom.y, odom.angle );
 }
 
 // 将角度从yaw转换为-Π到Π

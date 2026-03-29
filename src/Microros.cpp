@@ -19,7 +19,7 @@ rclc_executor_t executor;              // 执行器，用于管理订阅和计�
 rcl_node_t node;                       // 创建单片机上的节点
 rcl_subscription_t sub_cmd_vel;        // 创建一个订阅者
 geometry_msgs__msg__Twist msg_cmd_vel; // 创建一个消息存放数据
-
+//里程计
 rcl_publisher_t pub_odom;              // 创建一个里程计发布者
 nav_msgs__msg__Odometry msg_odom;       //存储里程计消息
 rcl_timer_t timer1;                  //创建一个定时器
@@ -107,7 +107,7 @@ void micro_ros_task(void *arg)
     // 2. 设置 transport
     IPAddress agent_ip;
     uint16_t agent_port = 8888;
-    agent_ip.fromString("192.168.167.51"); //-------------------------------------------------------------------------------------------------上位机地址
+    agent_ip.fromString("10.19.168.51"); //-------------------------------------------------------------------------------------------------上位机地址
     set_microros_wifi_transports("doomsday", "123123123", agent_ip, agent_port);
     delay(2000); // ⚠️ 关键：给 transport 充分时间初始化
 

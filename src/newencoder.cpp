@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <ESP32Encoder.h>  // 替换旧库
+#include <ESP32Encoder.h>   
 #include <Netprint.h>
 // 创建 4 个编码器对象
 ESP32Encoder encoders[4];
@@ -11,10 +11,16 @@ void Encoder_Init()
     ESP32Encoder::useInternalWeakPullResistors =puType::up;
 
     // 初始化 4 个编码器
-    encoders[0].attachHalfQuad(18, 17);   
-    encoders[2].attachHalfQuad(36, 48);   
-    encoders[1].attachHalfQuad(3, 8);  
-    encoders[3].attachHalfQuad(38,37);    
+    encoders[3].attachHalfQuad(17, 18);   
+    encoders[1].attachHalfQuad(48, 36);   
+ 
+     
+    encoders[0].attachHalfQuad(3, 8);  
+    encoders[2].attachHalfQuad(38,37);    
+
+    for (int i = 0; i < 4; i++){
+        encoders[i].setFilter(100); 
+    }
 }
 
 // 编码器计数
