@@ -1,25 +1,38 @@
 #ifndef MOTOR_CONTROL_H
-#define MOTOR_CONTROL_H 
+#define MOTOR_CONTROL_H
 
+#include <Arduino.h>
+
+// 每个电机的引脚与配置
+struct motor_cfg_t {
+    uint8_t pin_in1;
+    uint8_t pin_in2;
+    uint8_t pin_pwm;
+    uint8_t ledc_ch;   // LEDC 通道
+    bool    reverse;    // true = 硬件接线相反，软件取反
+};
 
 class My_motor
 {
 public:
-    My_motor() = default;  
+    My_motor() = default;
+
+    // 一次性初始化所有电机（放到 setup() 中调用一次即可）
+    void Motor_Setup();
+
+    // 运行电机：pwm = -100 ~ 100，自动处理方向、刹车
+    void Motor_Run(int ID, float pwm);
+
+    //刹车
+    void Motor_Brake(int ID);
+
+    //滑行
+    void Motor_Coast(int ID);
+
 private:
-    int ID_=0;
-    int V_=0;
-    int pwm_=0;
-    int in_=1;
-    int out_=0;
-
-public:
-    void Motor_Init(int ID,int turn);
-    void Motor_Run(int ID,float pwm  );
-    void Motor_Speed(int V);
-
+    // 根据 forward + reverse 标志，设置 IN1/IN2 方向电平
+    void set_direction(int ID, bool forward);
 };
-
 
 extern My_motor my_motor[4];
 #endif

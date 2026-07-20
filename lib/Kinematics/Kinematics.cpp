@@ -56,7 +56,7 @@ void odom_update()
     odom.y = odom.y + delt_distance * sin(odom.angle)/1000;
     last_time_K = now_K;
 
-     Serial.printf(  "x:%f,y:%f,angle:%f\n", odom.x, odom.y, odom.angle );
+    //Serial.printf(  "x:%f,y:%f,angle:%f\n", odom.x, odom.y, odom.angle );
 }
 
 // 将角度从yaw转换为-Π到Π

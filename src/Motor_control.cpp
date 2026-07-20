@@ -1,165 +1,114 @@
 #include <Arduino.h>
-#include <Esp32McpwmMotor.h>
 #include <Motor_control.h>
 
+// ============================================================
+// 每个电机的引脚与配置
+// ============================================================
+static const motor_cfg_t motor_cfg[] = {
+    // { IN1, IN2, PWM, ledc_ch, reverse }
+    {   7,  15,  16,       0,   false },  // 电机1
+    {  40,  41,  39,       1,   true  },  // 电机2
+    {   2,  42,   1,       2,   true  },  // 电机3
+    {   5,   6,   4,       3,   true  },  // 电机4
+};
 
+#define MOTOR_COUNT  (sizeof(motor_cfg) / sizeof(motor_cfg[0]))
 
-//定义四个轮子
+// 死区：低于此 PWM 值电机转不动，直接跳过
+#define MOTOR_DEAD_ZONE  5
 
-
-#define MOTOR1_ID 1
-#define MOTOR1_IN1 7                            // 11111111             4444444444
-#define MOTOR1_IN2 15                           // 22222222             3333333333
-#define MOTOR1_PWM 16
-
-#define MOTOR2_ID 2
-#define MOTOR2_IN1 40
-#define MOTOR2_IN2 41
-#define MOTOR2_PWM 39
-
-#define MOTOR3_ID 3
-#define MOTOR3_IN1 2
-#define MOTOR3_IN2 42
-#define MOTOR3_PWM 1
-
-
-#define MOTOR4_ID 4
-#define MOTOR4_IN1 5
-#define MOTOR4_IN2 6
-#define MOTOR4_PWM 4
-
-
-
-void My_motor::Motor_Init(int ID, int turn)
+// ============================================================
+// 一次性初始化所有电机 — 放到 setup() 开头调用一次
+// ============================================================
+void My_motor::Motor_Setup()
 {
-    // 电机一--------------------------------------------------------------------------
-    // 正反转
-    if (ID == 1)
-    {
-        pinMode(MOTOR1_IN2, OUTPUT);
-        pinMode(MOTOR1_IN1, OUTPUT);
-        if (turn == 0)
-        {
-            digitalWrite(MOTOR1_IN1, HIGH);
-            digitalWrite(MOTOR1_IN2, LOW);
-        }
-        else
-        {
-            digitalWrite(MOTOR1_IN1, LOW);
-            digitalWrite(MOTOR1_IN2, HIGH);
-        }
-        // PWM
-        pinMode(MOTOR1_PWM, OUTPUT);
-    }
-    // 电机二---------------------------------------------------------------------------
-    if (ID == 2)
-    {
-        pinMode(MOTOR2_IN2, OUTPUT);
-        pinMode(MOTOR2_IN1, OUTPUT);
-        if (turn == 1)
-        {
-            digitalWrite(MOTOR2_IN1, HIGH);
-            digitalWrite(MOTOR2_IN2, LOW);
-        }
-        else
-        {
-            digitalWrite(MOTOR2_IN1, LOW);
-            digitalWrite(MOTOR2_IN2, HIGH);
-        }
-        pinMode(MOTOR2_PWM, OUTPUT);
-    }
-    // 电机三---------------------------------------------------------------------------
-    if (ID == 3)
-    {
-        pinMode(MOTOR3_IN2, OUTPUT);
-        pinMode(MOTOR3_IN1, OUTPUT);
-        if (turn == 1)
-        {
-            digitalWrite(MOTOR3_IN1, HIGH);
-            digitalWrite(MOTOR3_IN2, LOW);
-        }
-        else
-        {
-            digitalWrite(MOTOR3_IN1, LOW);
-            digitalWrite(MOTOR3_IN2, HIGH);
-        }
-        pinMode(MOTOR3_PWM, OUTPUT);
-    }
-    // 电机四---------------------------------------------------------------------------
-    if (ID == 4)
-    {
-        pinMode(MOTOR4_IN2, OUTPUT);
-        pinMode(MOTOR4_IN1, OUTPUT);
-        if (turn == 0)
-        {
-            digitalWrite(MOTOR4_IN1, HIGH);
-            digitalWrite(MOTOR4_IN2, LOW);
-        }
-        else
-        {
-            digitalWrite(MOTOR4_IN1, LOW);
-            digitalWrite(MOTOR4_IN2, HIGH);
-        }
-        pinMode(MOTOR4_PWM, OUTPUT);
+    for (int i = 0; i < MOTOR_COUNT; i++) {
+        const auto &m = motor_cfg[i];
+
+        pinMode(m.pin_in1, OUTPUT);
+        pinMode(m.pin_in2, OUTPUT);
+        pinMode(m.pin_pwm, OUTPUT);
+
+        ledcSetup(m.ledc_ch, 20000, 8);
+        ledcAttachPin(m.pin_pwm, m.ledc_ch);
+
+        // 初始状态：刹车
+        digitalWrite(m.pin_in1, HIGH);
+        digitalWrite(m.pin_in2, HIGH);
+        ledcWrite(m.ledc_ch, 0);
     }
 }
-//
-// 输入电机的编号和速度实现速度占空比控速
-//
-void My_motor::Motor_Run(int ID, float  pwm)
+
+// ============================================================
+// 设置 IN1/IN2 方向电平
+// ============================================================
+void My_motor::set_direction(int ID, bool forward)
 {
-    float a = pwm * 0.01;
-    if (pwm > 0)
-    {
-        //设置电机的正反转
-        if (ID == 1)
-        {
-            Motor_Init(1, 0);
-            analogWrite(MOTOR1_PWM, int(255 * a));
-        }
-        if (ID == 2)
-        {
-            Motor_Init(2, 0);
-            analogWrite(MOTOR2_PWM, int(255 * a));
-        }
-        if (
-            ID == 3)
-        {
-            Motor_Init(3, 0);
-            analogWrite(MOTOR3_PWM, int(255 * a));
-        }
-        if (ID == 4)
-        {
-            Motor_Init(4, 1);
-            analogWrite(MOTOR4_PWM, int(255 * a));
-        }
-    }
-    else if (pwm < 0)
-    {
-        a = -a;
-        if (ID == 1)
-        {
-            Motor_Init(1, 1);
-            analogWrite(MOTOR1_PWM, int(255 * a));
-        }
-        if (ID == 2)
-        {
-            Motor_Init(2, 1);
-            analogWrite(MOTOR2_PWM, int(255 * a));
-        }
-        if (
-            ID == 3)
-        {
-            Motor_Init(3, 1);
-            analogWrite(MOTOR3_PWM, int(255 * a));
-        }
-        if (ID == 4)
-        {
-            Motor_Init(4, 0);
-            analogWrite(MOTOR4_PWM, int(255 * a));
-        }
-    }
+    if (ID < 1 || ID > MOTOR_COUNT) return;
+    const auto &m = motor_cfg[ID - 1];
+
+    // reverse ^ forward：异或，硬件反接时自动翻转方向
+    bool in1 =  forward ^ m.reverse;
+    bool in2 = !forward ^ m.reverse;
+
+    digitalWrite(m.pin_in1, in1 ? HIGH : LOW);
+    digitalWrite(m.pin_in2, in2 ? HIGH : LOW);
 }
-void My_motor::Motor_Speed(int V)
+
+// ============================================================
+// 运行电机：pwm = -100 ~ 100
+//   正值 → 正转，负值 → 反转，接近 0 → 刹车
+// ============================================================
+void My_motor::Motor_Run(int ID, float pwm)
 {
+    if (ID < 1 || ID > MOTOR_COUNT) return;
+    const auto &m = motor_cfg[ID - 1];
+
+    // pwm 接近 0 → 刹车
+    if (fabs(pwm) < 0.5f) {
+        Motor_Brake(ID);
+        return;
+    }
+
+    // 限幅
+    if (pwm >  100.0f) pwm =  100.0f;
+    if (pwm < -100.0f) pwm = -100.0f;
+
+    bool forward = (pwm > 0);
+    float speed = fabs(pwm) / 100.0f;         // 0.0 ~ 1.0
+    int duty = (int)(speed * 255);
+
+    // 死区补偿：低于阈值则直接拉到最小值，避免电机堵转不转
+    if (duty > 0 && duty < MOTOR_DEAD_ZONE) {
+        duty = MOTOR_DEAD_ZONE;
+    }
+
+    set_direction(ID, forward);
+    ledcWrite(m.ledc_ch, duty);
+}
+
+// ============================================================
+// 刹车：IN1=H, IN2=H  → 电机端子短路，急停
+// ============================================================
+void My_motor::Motor_Brake(int ID)
+{
+    if (ID < 1 || ID > MOTOR_COUNT) return;
+    const auto &m = motor_cfg[ID - 1];
+
+    digitalWrite(m.pin_in1, HIGH);
+    digitalWrite(m.pin_in2, HIGH);
+    ledcWrite(m.ledc_ch, 0);
+}
+
+// ============================================================
+// 滑行：IN1=L, IN2=L  → 电机自由转动
+// ============================================================
+void My_motor::Motor_Coast(int ID)
+{
+    if (ID < 1 || ID > MOTOR_COUNT) return;
+    const auto &m = motor_cfg[ID - 1];
+
+    digitalWrite(m.pin_in1, LOW);
+    digitalWrite(m.pin_in2, LOW);
+    ledcWrite(m.ledc_ch, 0);
 }

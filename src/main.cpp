@@ -14,11 +14,11 @@
 
 #include "newencoder.h" //编码器测速
 
-#include "Netprint.h" //UDP调试
-
 #include "Microros.h" //发布ros的
 
 #include "St7735.h" //屏幕初始化
+
+#include "ConfigManager.h" //配网管理
 
 #include "WiFi.h"
 
@@ -26,13 +26,43 @@ My_motor my_motor[4];                   // 电机实例化
 PID_run run[4];                         // 使用PID控制电机
 extern float Velocity[4];               // 拿到测量后的速度
 extern PIDController pid_controller[4]; // PID控制器实例化
-extern IPAddress serverIP;
 
 void setup()
 {
     Serial.begin(115200);
+
+    //初始化配置管理器
+    configManager.begin();
+
+    //是否按下GPIO44按钮，清空配置并进入配网模式
+    pinMode(44, INPUT_PULLUP);
+    delay(50);
+    if (digitalRead(44) == LOW) {
+        Serial.println("清空配置并进入配网模式");
+        configManager.clearConfig();
+        configManager.startAP();
+        while (true) {
+            configManager.handleClient();
+        }
+        return;
+    }
+
+    //没有配置过进入 AP 配网模式
+    if (!configManager.isConfigured()) {
+        configManager.startAP();
+        while (true) {
+            configManager.handleClient();
+        }
+        return;
+    }
+
+    //已有配置就正常启动
+    ConfigData cfg = configManager.getConfig();
+    Serial.printf("使用配置: SSID=%s, Agent IP=%s\n", cfg.ssid, cfg.agent_ip);
+
     xTaskCreate(micro_ros_task, "uros_task", 32768, NULL, 1, NULL); // 发布话题
 
+    WiFi.begin(cfg.ssid, cfg.password);
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
@@ -42,13 +72,15 @@ void setup()
     Serial.print("ESP32 IP: ");
     Serial.println(WiFi.localIP()); // 打印wifi的ip
 
-    // MPU6050_Init(); // 初始化MPU6050
+    //MPU6050_Init(); // 初始化MPU6050
 
     // St7735_Init(); // 初始化屏幕
 
     // Distance_chect_Init();//初始化测距模块
 
     Encoder_Init(); // 编码器初始化
+
+    my_motor[0].Motor_Setup(); // 初始化电机引脚和PWM
 
     Pid_controller_init(); // PID控制器初始化
 
@@ -57,7 +89,7 @@ void setup()
 void loop()
 {
     // 测姿态-----------------------------------------------------------------------------------------------------------------------------------------------
-    // MPU6050_check();
+    //MPU6050_check();
 
     // 测距离------------------------------------------------------------------------------------------------------------------------------------------------------
     // float distance = Distance_chect();
@@ -73,7 +105,6 @@ void loop()
 
     // 里程计打印--------------------------------------------------------------------------------------------------------------------------------
     odom_update();
-
 
     run[0].Pid_run_();
     run[1].Pid_run_();

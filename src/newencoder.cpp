@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <ESP32Encoder.h>   
-#include <Netprint.h>
 // 创建 4 个编码器对象
 ESP32Encoder encoders[4];
 
@@ -33,7 +32,6 @@ void Encoder_Check()
     int64_t t3 = encoders[3].getCount();
 
     //打印调试
-    //netPrintf("tick1=%lld,tick2=%lld,tick3=%lld,tick4=%lld\n", t0,t1, t2, t3 );//网络
     //Serial.printf("tick1=%lld,tick2=%lld,tick3=%lld,tick4=%lld\n", t0,t1, t2, t3 );//串口
 
 }
@@ -60,7 +58,6 @@ void Velocity_Check()
 
 
     //打印调试
-    //netPrintf("Velocity1=%.3f,Velocity2=%.3f,Velocity3=%.3f,Velocity4=%.3f\n",Velocity[0], Velocity[1], Velocity[2], Velocity[3]);
     Serial.printf("Velocity1=%.3f,Velocity2=%.3f,Velocity3=%.3f,Velocity4=%.3f\n",Velocity[0], Velocity[1], Velocity[2], Velocity[3]);
               
 }

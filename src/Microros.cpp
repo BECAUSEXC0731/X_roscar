@@ -11,6 +11,7 @@ extern odom_t odom;
 #include <geometry_msgs/msg/twist.h> //运动指令的消息接口
 #include "nav_msgs/msg/odometry.h"//里程计的消息接口
 #include "micro_ros_utilities/string_utilities.h"//引入字符串内存分配初始化工具
+#include "ConfigManager.h"//配网管理
 
 // 声明一些结构体对象
 rcl_allocator_t allocator;             // 用于动态内存分配
@@ -21,8 +22,8 @@ rcl_subscription_t sub_cmd_vel;        // 创建一个订阅者
 geometry_msgs__msg__Twist msg_cmd_vel; // 创建一个消息存放数据
 //里程计
 rcl_publisher_t pub_odom;              // 创建一个里程计发布者
-nav_msgs__msg__Odometry msg_odom;       //存储里程计消息
-rcl_timer_t timer1;                  //创建一个定时器
+nav_msgs__msg__Odometry msg_odom;      //存储里程计消息
+rcl_timer_t timer1;                    //创建一个定时器
 
 float out_MotorL = 0, out_MotorR = 0;
 float target_linear = 0;
@@ -89,9 +90,8 @@ void twist_callback(const void *msg_in)
 
 void micro_ros_task(void *arg)
 {
-    // 1. 连接 WiFi
-    Serial.println("Connecting to WiFi...");
-    WiFi.begin("doomsday", "123123123");
+    // 1. 等待 WiFi（main.cpp 已发起连接，这里只需等待）
+    Serial.println("Waiting for WiFi...");
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
@@ -104,11 +104,12 @@ void micro_ros_task(void *arg)
     }
     Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
 
-    // 2. 设置 transport
+    // 2. 从配置读取 Agent IP，设置 transport
+    ConfigData cfg = configManager.getConfig();
     IPAddress agent_ip;
     uint16_t agent_port = 8888;
-    agent_ip.fromString("10.19.168.51"); //-------------------------------------------------------------------------------------------------上位机地址
-    set_microros_wifi_transports("doomsday", "123123123", agent_ip, agent_port);
+    agent_ip.fromString(cfg.agent_ip);
+    set_microros_wifi_transports(cfg.ssid, cfg.password, agent_ip, agent_port);
     delay(2000); // ⚠️ 关键：给 transport 充分时间初始化
 
     // 3. 初始化 micro-ROS（带错误检查！）

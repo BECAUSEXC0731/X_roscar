@@ -9,7 +9,7 @@
 
 #include "Wire.h"
 #include <MPU6050_light.h>
-#include "Netprint.h"
+//#include "Netprint.h"
 MPU6050 mpu(Wire);
 
 
@@ -34,16 +34,19 @@ unsigned long timer = 0;
 void MPU6050_check() {
   mpu.update();
   if (millis() - timer > 1000) { // 每秒打印一次
-    netPrintf("TEMPERATURE: %.2f\n", mpu.getTemp());
-    netPrintf("ACCELERO  X: %.2f\tY: %.2f\tZ: %.2f\n",
-              mpu.getAccX(), mpu.getAccY(), mpu.getAccZ());
-    netPrintf("GYRO      X: %.2f\tY: %.2f\tZ: %.2f\n",
-              mpu.getGyroX(), mpu.getGyroY(), mpu.getGyroZ());
-    netPrintf("ACC ANGLE X: %.2f\tY: %.2f\n",
-              mpu.getAccAngleX(), mpu.getAccAngleY());
-    netPrintf("ANGLE     X: %.2f\tY: %.2f\tZ: %.2f\n",
-              mpu.getAngleX(), mpu.getAngleY(), mpu.getAngleZ());
-    netPrintf("=====================================================\n");
+    Serial.print("TEMPERATURE: "); Serial.print(mpu.getTemp()); Serial.println();
+    Serial.print("ACCELERO  X: "); Serial.print(mpu.getAccX());
+    Serial.print("\tY: "); Serial.print(mpu.getAccY());
+    Serial.print("\tZ: "); Serial.println(mpu.getAccZ());
+    Serial.print("GYRO      X: "); Serial.print(mpu.getGyroX());
+    Serial.print("\tY: "); Serial.print(mpu.getGyroY());
+    Serial.print("\tZ: "); Serial.println(mpu.getGyroZ());
+    Serial.print("ACC ANGLE X: "); Serial.print(mpu.getAccAngleX());
+    Serial.print("\tY: "); Serial.println(mpu.getAccAngleY());
+    Serial.print("ANGLE     X: "); Serial.print(mpu.getAngleX());
+    Serial.print("\tY: "); Serial.print(mpu.getAngleY());
+    Serial.print("\tZ: "); Serial.println(mpu.getAngleZ());
+    Serial.println("====================================================");
     timer = millis();
   }
 }
