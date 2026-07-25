@@ -1,5 +1,6 @@
 #include <Arduino.h>
-#include <ESP32Encoder.h>   
+#include <ESP32Encoder.h>
+#include "PinConfig.h"
 // 创建 4 个编码器对象
 ESP32Encoder encoders[4];
 
@@ -10,12 +11,12 @@ void Encoder_Init()
     ESP32Encoder::useInternalWeakPullResistors =puType::up;
 
     // 初始化 4 个编码器
-    encoders[3].attachHalfQuad(17, 18);   
-    encoders[1].attachHalfQuad(48, 36);   
- 
-     
-    encoders[0].attachHalfQuad(3, 8);  
-    encoders[2].attachHalfQuad(38,37);    
+    encoders[3].attachHalfQuad(ENCODER3_A, ENCODER3_B);
+    encoders[1].attachHalfQuad(ENCODER1_A, ENCODER1_B);
+
+
+    encoders[0].attachHalfQuad(ENCODER0_A, ENCODER0_B);
+    encoders[2].attachHalfQuad(ENCODER2_A, ENCODER2_B);
 
     for (int i = 0; i < 4; i++){
         encoders[i].setFilter(100); 
@@ -44,7 +45,6 @@ float Velocity[4] = {0};//四个轮子的速度
 //获取轮子的速度
 void Velocity_Check()
 {
-    delay(10);
     int64_t now = millis();
     float dt = (now - last_time) / 1000.0f; // 秒
 

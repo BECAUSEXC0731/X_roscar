@@ -1,26 +1,22 @@
 #include <Arduino.h>
-// 定义引脚
-#define TRIG 13 // 触发引脚
-#define ECHO 45 // 回波引脚
+#include "PinConfig.h"
 
 //测距函数初始化
 void Distance_chect_Init()
 {
-   
-    pinMode(TRIG, OUTPUT);
-    pinMode(ECHO, INPUT); // 回波检测
-    digitalWrite(TRIG, LOW); // 初始化为低，避免误触发
-   
+    pinMode(SONIC_TRIG, OUTPUT);
+    pinMode(SONIC_ECHO, INPUT); // 回波检测
+    digitalWrite(SONIC_TRIG, LOW); // 初始化为低，避免误触发
 }
 
 //测距函数
 float Distance_chect()
 {
-    digitalWrite(TRIG, HIGH);
+    digitalWrite(SONIC_TRIG, HIGH);
     delayMicroseconds(10);
-    digitalWrite(TRIG, LOW);
+    digitalWrite(SONIC_TRIG, LOW);
      
-    double duration = pulseIn(ECHO, HIGH,30000);//检测声波来回的时间
+    double duration = pulseIn(SONIC_ECHO, HIGH,30000);//检测声波来回的时间
     if (duration == 0) {
         return -1.0;  
     }

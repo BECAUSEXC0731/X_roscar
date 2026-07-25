@@ -9,13 +9,13 @@
 
 #include "Wire.h"
 #include <MPU6050_light.h>
-//#include "Netprint.h"
+#include "PinConfig.h"
 MPU6050 mpu(Wire);
 
 
 void MPU6050_Init() {
   
-  Wire.begin(9,46);         //初始化I2C总线-----------------------------------------------
+  Wire.begin(MPU_SDA, MPU_SCL);         //初始化I2C总线
   
   byte status = mpu.begin();
  Serial.print("MPU6050 status: ");

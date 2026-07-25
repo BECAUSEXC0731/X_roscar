@@ -60,9 +60,8 @@ void odom_update()
 }
 
 // 将角度从yaw转换为-Π到Π
-void angle_trans(float angle, float angle_out)
+void angle_trans(float angle, float &angle_out)
 {
-
     if (angle > PI)
         angle_out = angle - 2 * PI;
     else if (angle < -PI)

@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include "Diantance_check.h" //测量距离
+#include "Distance_check.h" //测量距离
 
 #include "MPU6050.h" //测量姿态
 
@@ -20,6 +20,10 @@
 
 #include "ConfigManager.h" //配网管理
 
+#include "OledDisplay.h" // OLED 屏幕
+
+#include "PinConfig.h" // 引脚集中配置
+
 #include "WiFi.h"
 
 My_motor my_motor[4];                   // 电机实例化
@@ -35,7 +39,7 @@ void setup()
     configManager.begin();
 
     //是否按下GPIO44按钮，清空配置并进入配网模式
-    pinMode(44, INPUT_PULLUP);
+    pinMode(CFG_BUTTON, INPUT_PULLUP);
     delay(50);
     if (digitalRead(44) == LOW) {
         Serial.println("清空配置并进入配网模式");
@@ -72,6 +76,12 @@ void setup()
     Serial.print("ESP32 IP: ");
     Serial.println(WiFi.localIP()); // 打印wifi的ip
 
+    // ── OLED 初始化 ────────────────────────────────────────
+    oledDisplay.begin();
+    oledDisplay.showInitMessage("Initializing...");
+    delay(500);
+    oledDisplay.setIP(WiFi.localIP().toString().c_str());
+
     //MPU6050_Init(); // 初始化MPU6050
 
     // St7735_Init(); // 初始化屏幕
@@ -103,13 +113,14 @@ void loop()
     // Encoder_Check();
     Velocity_Check();
 
-    // 里程计打印--------------------------------------------------------------------------------------------------------------------------------
-    odom_update();
-
     run[0].Pid_run_();
     run[1].Pid_run_();
     run[2].Pid_run_();
     run[3].Pid_run_();
+
+    // ── OLED 刷新（IP + 速度条形图）───────────────────────
+    oledDisplay.updateSpeeds(Velocity);
+
     // St7735屏幕的测试
     // St7735_test();
 }

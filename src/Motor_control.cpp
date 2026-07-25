@@ -1,15 +1,16 @@
 #include <Arduino.h>
 #include <Motor_control.h>
+#include "PinConfig.h"
 
 // ============================================================
 // 每个电机的引脚与配置
 // ============================================================
 static const motor_cfg_t motor_cfg[] = {
     // { IN1, IN2, PWM, ledc_ch, reverse }
-    {   7,  15,  16,       0,   false },  // 电机1
-    {  40,  41,  39,       1,   true  },  // 电机2
-    {   2,  42,   1,       2,   true  },  // 电机3
-    {   5,   6,   4,       3,   true  },  // 电机4
+    { MOTOR1_IN1, MOTOR1_IN2, MOTOR1_PWM, 0, false },  // 电机1
+    { MOTOR2_IN1, MOTOR2_IN2, MOTOR2_PWM, 1, true  },  // 电机2
+    { MOTOR3_IN1, MOTOR3_IN2, MOTOR3_PWM, 2, true  },  // 电机3
+    { MOTOR4_IN1, MOTOR4_IN2, MOTOR4_PWM, 3, true  },  // 电机4
 };
 
 #define MOTOR_COUNT  (sizeof(motor_cfg) / sizeof(motor_cfg[0]))

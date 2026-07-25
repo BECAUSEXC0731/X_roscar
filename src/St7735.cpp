@@ -1,14 +1,7 @@
 #include "St7735.h"
 #include <Adafruit_GFX.h> 
 #include <Adafruit_ST7735.h>
-
-
-// 引脚
-#define TFT_SCLK  11   // SCL → 时钟
-#define TFT_MOSI  12   // SDA → 数据 (MOSI)
-#define TFT_CS   21   // Chip Select
-#define TFT_DC   14   // Data/Command
-#define TFT_RST  13  // Reset
+#include "PinConfig.h"
 
 // 使用软件 SPI 构造函数：(cs, dc, mosi, sclk, rst)
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);

@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <ESP32Servo.h>
+#include "PinConfig.h"
 
 // === UDP 配置 ===
 unsigned int localPort = 4210;      // 本地监听端口
@@ -9,8 +10,8 @@ WiFiUDP udp;
 const int packetSize = 2;           // 每次收 2 字节：[pan, tilt]
 
 // === 舵机引脚 ===
-const int PAN_PIN = 18;
-const int TILT_PIN = 17;
+const int PAN_PIN = SERVO_PAN;
+const int TILT_PIN = SERVO_TILT;
 Servo panServo;
 Servo tiltServo;
 

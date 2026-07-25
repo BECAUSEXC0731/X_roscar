@@ -40,7 +40,7 @@ typedef struct
 //里程计更新含函数
 void odom_update();
 //角度从yaw转换为-Π到Π
-void angle_trans(float angle,float angle_out);
+void angle_trans(float angle,float &angle_out);
 //获取里程计值
 
 // };
