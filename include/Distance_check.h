@@ -3,6 +3,6 @@
 
 void Distance_chect_Init();
 
-double Distance_chect();
+float Distance_chect();
 
 #endif

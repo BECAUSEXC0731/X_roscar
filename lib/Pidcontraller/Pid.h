@@ -12,7 +12,7 @@ private:
     float Kp_=0, Ki_=0, Kd_=0;
     float error_=0, error_last_=0, error_sum_=0, derror_=0;
     
-    float intergral_up_ = 400; // 设置积分上下限
+    float intergral_up_ = 800; // 设置积分上下限
 
 public:
     float update(float current);                // 提供当前值，返回下次输出值，也就是PID的结果

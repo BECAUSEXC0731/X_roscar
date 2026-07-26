@@ -17,6 +17,7 @@ public:
 private:
     int ID_;
     float TARGET_;
+    float lastOutput_ = 0;     // 上次 PID 输出值（用于缓动限幅）
 
 public:
     void Pid_run_();

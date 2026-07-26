@@ -23,8 +23,8 @@ public:
     // 设置 IP 地址（在 WiFi 连接后调用）
     void setIP(const char *ip);
 
-    // 刷新界面：IP + 4 个速度条形图（内部限频 20Hz）
-    void updateSpeeds(const float speeds[4]);
+    // 刷新界面：IP + 4 路轮速（带正负号），限频 20Hz
+    void updateDisplay(const float speeds[4]);
 
     // 清屏
     void clear();
@@ -34,9 +34,8 @@ private:
     bool initialized_;
     char ip_[16];
     unsigned long lastUpdateMs_;
-
-    // 绘制单个速度条
-    void drawSpeedBar(int index, float speed);
+    unsigned int animFrame_;  // 底部动画帧计数器
+    void drawMiniBar(int x, int y, int w, int h, float speed, float maxSpeed);
 };
 
 extern OledDisplay oledDisplay;

@@ -4,21 +4,21 @@
 #include "Arduino.h"
 #include "Pid_control.h"
 
-#define KP1 0.30
-#define KI1 0.07
-#define KD1 0.1
+#define KP1 0.266
+#define KI1 0.04
+#define KD1 0.0
 
-#define KP2 0.3
-#define KI2 0.05
-#define KD2 0.05
+#define KP2 0.266
+#define KI2 0.04
+#define KD2 0.0
 
-#define KP3 0.4
-#define KI3 0.08
-#define KD3 0.05
+#define KP3 0.245
+#define KI3 0.05
+#define KD3 0.0
 
-#define KP4 0.3
-#define KI4 0.08
-#define KD4 0.04
+#define KP4 0.245
+#define KI4 0.04
+#define KD4 0.0
 
 #define LIMIT 100
 
@@ -48,7 +48,7 @@ void Pid_controller_run(float TARGET)
     pid_controller[1].Set_Target(TARGET);
     pid_controller[2].Set_Target(TARGET);
     pid_controller[3].Set_Target(TARGET);
-    Velocity_Check();
+   
    
     my_motor[0].Motor_Run(1, pid_controller[0].update(Velocity[0]));
     my_motor[1].Motor_Run(2, pid_controller[1].update(Velocity[1]));
@@ -56,10 +56,22 @@ void Pid_controller_run(float TARGET)
     my_motor[3].Motor_Run(4, pid_controller[3].update(Velocity[3]));
 }
 
-//--------------------------------------------------闲得无聊的类------------------
-void PID_run::Pid_run_()//-------------------------------------运行定电机PID
+// ── 每周期最大输出变化量（缓动限幅，防止抽搐）────────
+#define SLEW_RATE  50.0f
+
+//--------------------------------------------------PID运行------------------
+void PID_run::Pid_run_()
 {
-    my_motor[ID_].Motor_Run((ID_ + 1), pid_controller[ID_].update(Velocity[ID_]));
+    float raw = pid_controller[ID_].update(Velocity[ID_]);
+
+    // 缓动限幅：本次输出不能比上次突变超过 SLEW_RATE
+    float delta = raw - lastOutput_;
+    if (delta >  SLEW_RATE) delta =  SLEW_RATE;
+    if (delta < -SLEW_RATE) delta = -SLEW_RATE;
+    float smoothed = lastOutput_ + delta;
+    lastOutput_ = smoothed;
+
+    my_motor[ID_].Motor_Run((ID_ + 1), smoothed);
 }
 
 void PID_run::Pid_setgoal(int ID, float TARGET)//给PID控制器设置目标值

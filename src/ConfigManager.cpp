@@ -151,6 +151,22 @@ void ConfigManager::handleNotFound()
 }
 
 // ============================================================
+// 设置默认配置（仅在 NVS 无配置时生效）
+// ============================================================
+void ConfigManager::setDefaults(const char *ssid, const char *pass, const char *ip)
+{
+    if (strlen(config_.ssid) == 0) {
+        strncpy(config_.ssid,     ssid, sizeof(config_.ssid) - 1);
+        strncpy(config_.password, pass, sizeof(config_.password) - 1);
+        strncpy(config_.agent_ip, ip,   sizeof(config_.agent_ip) - 1);
+        Serial.printf("📋 使用默认配置: SSID=%s, Agent IP=%s\n",
+            config_.ssid, config_.agent_ip);
+    } else {
+        Serial.println("📂 使用 NVS 中保存的配置");
+    }
+}
+
+// ============================================================
 // NVS 读写
 // ============================================================
 void ConfigManager::saveToNVS()

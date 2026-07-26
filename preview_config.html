@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32 配网</title>
+<style>
+body{font-family:Arial;margin:20px;background:#f0f0f0}
+.card{background:white;padding:24px;border-radius:10px;max-width:400px;margin:auto;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center}
+.logo{font-size:64px;margin-bottom:8px}
+h2{color:#333;text-align:center;margin-top:4px;margin-bottom:4px}
+.subtitle{color:#888;font-size:13px;margin-bottom:16px}
+.desc{background:#e8f5e9;padding:10px;border-radius:6px;font-size:13px;color:#2e7d32;margin-bottom:16px;text-align:left}
+.desc b{display:block;margin-bottom:4px}
+label{display:block;margin-top:12px;color:#555;font-size:14px;text-align:left}
+input{width:100%;padding:10px;margin:4px 0 8px 0;border:1px solid #ddd;border-radius:5px;box-sizing:border-box;font-size:14px}
+button{width:100%;padding:12px;background:#4CAF50;color:white;border:none;border-radius:5px;font-size:16px;cursor:pointer;margin-top:12px}
+button:hover{background:#45a049}
+.hint{color:#999;font-size:12px;margin-top:0;text-align:left}
+.footer{text-align:center;margin-top:16px;color:#aaa;font-size:12px}
+</style>
+</head>
+<body>
+<div class="card">
+<!-- 🖼️ 自定义图片/图标：可以用 emoji 或者 base64 小图 -->
+<div class="logo">🤖</div>
+<h2>X-roscar 小车配置</h2>
+<p class="subtitle">WiFi &amp; 通信设置</p>
+
+<!-- 📝 自定义说明文字 -->
+<div class="desc">
+<b>📌 使用说明</b>
+1. 打开手机热点<br>
+2. 输入热点名称和密码<br>
+3. 输入电脑的 IP 地址<br>
+4. 点击保存，小车将自动连接
+</div>
+
+<form action="/save" method="POST">
+<label>📶 手机热点名称 (SSID):</label>
+<input name="ssid" value="" required placeholder="请输入热点名称">
+
+<label>🔑 热点密码:</label>
+<input name="pass" type="password" value="" placeholder="可选，无密码留空">
+
+<label>🖥️ Agent IP (电脑IP):</label>
+<input name="ip" placeholder="192.168.x.x" value="" required>
+<p class="hint">💡 查看电脑连接手机热点后分配到的 IP</p>
+
+<button type="submit">✅ 保存并重启</button>
+</form>
+<div class="footer">⚡ 配置将保存到 ESP32 闪存，掉电不丢</div>
+</div>
+</body>
+</html>

@@ -1,6 +1,8 @@
 #include "Kinematics.h"
 #include "Pid_control.h"
 #include "Motor_control.h"
+#include "MPU6050.h"
+#include "PinConfig.h"
 extern odom_t odom;
 // 引入microros和wifi相关的库函数------------------------------------------------------------------------
 #include "WiFi.h"
@@ -9,6 +11,7 @@ extern odom_t odom;
 #include "rclc/rclc.h"
 #include "rclc/executor.h"
 #include <geometry_msgs/msg/twist.h> //运动指令的消息接口
+#include <geometry_msgs/msg/vector3.h> //MPU姿态的消息接口
 #include "nav_msgs/msg/odometry.h"//里程计的消息接口
 #include "micro_ros_utilities/string_utilities.h"//引入字符串内存分配初始化工具
 #include "ConfigManager.h"//配网管理
@@ -24,6 +27,11 @@ geometry_msgs__msg__Twist msg_cmd_vel; // 创建一个消息存放数据
 rcl_publisher_t pub_odom;              // 创建一个里程计发布者
 nav_msgs__msg__Odometry msg_odom;      //存储里程计消息
 rcl_timer_t timer1;                    //创建一个定时器
+//MPU姿态
+rcl_publisher_t pub_mpu;               // MPU 姿态发布者
+geometry_msgs__msg__Vector3 msg_mpu;   // x=俯仰(pitch), y=翻滚(roll), z=偏航(yaw)
+// 外部引用：记录最后收到 cmd_vel 的时间戳（由 main.cpp 的 loop 用于控制 STATUS LED）
+extern volatile unsigned long lastCmdReceivedMs;
 
 float out_MotorL = 0, out_MotorR = 0;
 float target_linear = 0;
@@ -48,9 +56,17 @@ void timer_callback(rcl_timer_t *timer1, int64_t last_call_time)
 
     if(rcl_publish(&pub_odom, &msg_odom, NULL)!=RCL_RET_OK)
     {
-        Serial.println("publish failed");
+        Serial.println("odom publish failed");
     }
-    
+
+    // ── 发布 MPU 姿态（pitch / roll / yaw）────────────────
+    msg_mpu.x = getMPUPitch();
+    msg_mpu.y = getMPURoll();
+    msg_mpu.z = getMPUYaw();
+    if (rcl_publish(&pub_mpu, &msg_mpu, NULL) != RCL_RET_OK)
+    {
+        Serial.println("mpu publish failed");
+    }
 }
 
 
@@ -59,6 +75,10 @@ void timer_callback(rcl_timer_t *timer1, int64_t last_call_time)
 void twist_callback(const void *msg_in)
 {
     Serial.println("=== 收到 /cmd_vel 消息 ===");
+
+    // ── 点亮 STATUS 指示灯（main loop 会在超时后熄灭）──
+    digitalWrite(STUTS, HIGH);
+    lastCmdReceivedMs = millis();
 
     // 将收到的消息指针转换为指向geometry_msgs__msg__Twist的指针
     const geometry_msgs__msg__Twist *msg = (geometry_msgs__msg__Twist *)msg_in;
@@ -158,9 +178,14 @@ void micro_ros_task(void *arg)
     msg_odom.child_frame_id = micro_ros_string_utilities_set(msg_odom.child_frame_id,"base_footprint");
     //初始化odom发布着和定时器
     rclc_publisher_init_best_effort(&pub_odom, &node,ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),"/odom");
-   
-    
-    //每间隔5ms调用一次回调函数
+
+    //初始化MPU姿态发布者
+    rclc_publisher_init_best_effort(
+        &pub_mpu, &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Vector3),
+        "/mpu");
+
+    //每间隔50ms调用一次回调函数
     rclc_timer_init_default(&timer1, &support, RCL_MS_TO_NS(50), timer_callback);
     rclc_executor_add_timer(&executor, &timer1);
     //同步时间

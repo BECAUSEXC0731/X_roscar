@@ -21,6 +21,12 @@ void MPU6050_Init() {
  Serial.print("MPU6050 status: ");
 
   while(status!=0){ } // stop everything if could not connect to MPU6050
+
+  // ── 启用 I2C 旁路模式（Bypass）─────────────────────────
+  // 设置 INT_PIN_CFG 寄存器(0x37) 的 bit 1 (BYPASS_EN = 0x02)
+  // 使 MPU6050 将主 I2C 直通到 XDA/XCL，ESP32 可直接访问 OLED
+  mpu.writeData(0x37, 0x02);
+  Serial.println("I2C Bypass enabled (OLED via MPU XDA/XCL)");
   
   Serial.print("Calculating offsets, do not move MPU6050");
   delay(1000);
@@ -49,4 +55,32 @@ void MPU6050_check() {
     Serial.println("====================================================");
     timer = millis();
   }
+}
+
+// ============================================================
+// 更新 MPU 数据（每次读取前调用）
+// ============================================================
+void updateMPU() {
+  mpu.update();
+}
+
+// ============================================================
+// 获取偏航角（Z 轴旋转，单位：度）
+// ============================================================
+float getMPUYaw() {
+  return mpu.getAngleZ();
+}
+
+// ============================================================
+// 获取俯仰角（X 轴，单位：度）
+// ============================================================
+float getMPUPitch() {
+  return mpu.getAngleX();
+}
+
+// ============================================================
+// 获取翻滚角（Y 轴，单位：度）
+// ============================================================
+float getMPURoll() {
+  return mpu.getAngleY();
 }

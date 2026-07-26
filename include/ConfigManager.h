@@ -22,6 +22,7 @@ public:
     void startAP();         // 开启 AP 热点 + Web 配置页面
     void handleClient();    // 处理 Web 请求（放 loop 里）
     void clearConfig();     // 清除 NVS 中的配置
+    void setDefaults(const char *ssid, const char *pass, const char *ip); // NVS 为空时设置默认值
 
 private:
     ConfigData config_;
