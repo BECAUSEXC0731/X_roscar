@@ -1,0 +1,9 @@
+{
+    "names": {
+        "microxrcedds_client": {
+            "cmake-args": [
+                "-DUCLIENT_CUSTOM_TRANSPORT_MTU=2048"
+            ]
+        }
+    }
+}

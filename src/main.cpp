@@ -24,6 +24,8 @@
 
 #include "SelfCheck.h" // 上电自检
 
+#include "Lidar.h" //雷达驱动 (UART1)
+
 #include "WiFi.h"
 
 My_motor my_motor[4];                   // 电机实例化
@@ -39,11 +41,11 @@ volatile unsigned long lastCmdReceivedMs = 0;
 // ════════════════════════════════════════════════════════════
 static const char DEFAULT_SSID[] = "doomsday";
 static const char DEFAULT_PASS[] = "123123123";
-static const char DEFAULT_AGENT_IP[] = "192.168.1.1";
+static const char DEFAULT_AGENT_IP[] = "10.87.104.51";
 
 void setup()
 {
-    // 读配置按键
+    // 读配置按键（GPIO11，接地清空配置并进入配网模式）
     pinMode(CFG_BUTTON, INPUT_PULLUP);
     delay(5);
     bool cfgBtnPressed = (digitalRead(CFG_BUTTON) == LOW);
@@ -71,7 +73,7 @@ void setup()
     ConfigData cfg = configManager.getConfig();
     Serial.printf("使用配置: SSID=%s, Agent IP=%s\n", cfg.ssid, cfg.agent_ip);
 
-    // xTaskCreate(micro_ros_task, "uros_task", 32768, NULL, 1, NULL); // 发布话题=============================
+    xTaskCreate(micro_ros_task, "uros_task", 32768, NULL, 1, NULL); // 发布话题=============================
 
     WiFi.begin(cfg.ssid, cfg.password);
     while (WiFi.status() != WL_CONNECTED)
@@ -100,7 +102,9 @@ void setup()
 
     Pid_controller_init(); // PID控制器初始化
 
-    // Servo_init();          // 舵机初始化
+    Lidar_Init();          // 雷达初始化 (UART1, 150000 波特)
+
+    Servo_init();          // 舵机初始化
 
     // ── 上电自检 ──────────────────────────────────────────
     bool selfCheckPass = runSelfCheck();
@@ -153,14 +157,12 @@ void loop()
     float combinedSpeed = (fabs(Velocity[0]) + fabs(Velocity[1])
                          + fabs(Velocity[2]) + fabs(Velocity[3])) / 4.0f;
 
+    // Pid_controller_run(250); //测试轮子的正反
 
-    Pid_controller_run(250); //测试轮子的正反
-
-
-    // run[0].Pid_run_();
-    // run[1].Pid_run_();
-    // run[2].Pid_run_();
-    // run[3].Pid_run_();
+    run[0].Pid_run_();
+    run[1].Pid_run_();
+    run[2].Pid_run_();
+    run[3].Pid_run_();
 
     // Servo_run();           // 舵机 UDP 控制
 

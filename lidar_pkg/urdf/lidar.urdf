@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot name="lidar_bot">
+
+  <!-- 1. 定义一个基础连杆 (Base Link) -->
+  <!-- 这是一个虚拟的中心点，通常代表机器人的底盘中心 -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- 2. 定义激光雷达的连杆 (Laser Link) -->
+  <!-- 注意：name 必须必须必须是 "laser" -->
+  <!-- 因为你的 C++ 代码里写了 pnh_.param<std::string>("frame_id", frame_id_, "laser"); -->
+  <link name="laser">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder length="0.04" radius="0.03"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1.0 0.0 0.0 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- 3. 定义关节 (Joint) -->
+  <!-- 描述激光雷达安装在底座的什么位置 -->
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser"/>
+    <!-- 这里假设雷达安装在底座上方 0.08米处 -->
+    <origin xyz="0 0 0.08" rpy="0 0 0"/>
+  </joint>
+
+</robot>

@@ -1,0 +1,3 @@
+# 雷达数据在 cdc_acm 端口(接口0+1 -> ttyACM*)，不在 usbserial 的 ttyUSB*
+# 只匹配 ttyACM*，创建稳定链接 /dev/lidar
+SUBSYSTEM=="tty", KERNEL=="ttyACM*", ATTRS{idVendor}=="34bf", ATTRS{idProduct}=="ff0a", MODE="0666", SYMLINK+="lidar"

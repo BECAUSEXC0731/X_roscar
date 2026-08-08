@@ -16,4 +16,14 @@ float getMPUPitch();
 // 获取翻滚角（Y 轴）
 float getMPURoll();
 
+// ── 陀螺仪数据（单位：度/秒）──────────────────────────
+float getMPUGyroX();
+float getMPUGyroY();
+float getMPUGyroZ();
+
+// ── 加速度计数据（单位：g，1g = 9.81 m/s²）────────────
+float getMPUAccelX();
+float getMPUAccelY();
+float getMPUAccelZ();
+
 #endif

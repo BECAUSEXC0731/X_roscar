@@ -4,21 +4,21 @@
 #include "Arduino.h"
 #include "Pid_control.h"
 
-#define KP1 0.266
-#define KI1 0.04
-#define KD1 0.0
+#define KP1 0.28
+#define KI1 0.10
+#define KD1 0.01
 
-#define KP2 0.266
-#define KI2 0.04
-#define KD2 0.0
+#define KP2 0.254
+#define KI2 0.08
+#define KD2 0.05
 
-#define KP3 0.245
-#define KI3 0.05
-#define KD3 0.0
+#define KP3 0.255
+#define KI3 0.08
+#define KD3 0.01
 
-#define KP4 0.245
-#define KI4 0.04
-#define KD4 0.0
+#define KP4 0.255
+#define KI4 0.09
+#define KD4 0.01
 
 #define LIMIT 100
 
@@ -57,7 +57,7 @@ void Pid_controller_run(float TARGET)
 }
 
 // ── 每周期最大输出变化量（缓动限幅，防止抽搐）────────
-#define SLEW_RATE  50.0f
+#define SLEW_RATE  12.0f
 
 //--------------------------------------------------PID运行------------------
 void PID_run::Pid_run_()

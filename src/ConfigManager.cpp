@@ -197,6 +197,11 @@ bool ConfigManager::loadFromNVS()
 
     nvs_close(nvs);
 
+    // ⚠️ 确保字符串都以 '\0' 结尾，防止 printf/fromString 读到越界脏数据
+    config_.ssid[sizeof(config_.ssid) - 1]         = '\0';
+    config_.password[sizeof(config_.password) - 1] = '\0';
+    config_.agent_ip[sizeof(config_.agent_ip) - 1] = '\0';
+
     if (strlen(config_.ssid) > 0) {
         Serial.printf("📂 从 NVS 读取配置: SSID=%s, Agent IP=%s\n",
             config_.ssid, config_.agent_ip);

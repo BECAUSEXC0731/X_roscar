@@ -1,0 +1,4 @@
+lidar_node:
+  ros__parameters:
+    port_name: "/dev/lidar"
+    frame_id: "laser_frame"

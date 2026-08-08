@@ -84,3 +84,17 @@ float getMPUPitch() {
 float getMPURoll() {
   return mpu.getAngleY();
 }
+
+// ============================================================
+// 陀螺仪数据（度/秒）
+// ============================================================
+float getMPUGyroX() { return mpu.getGyroX(); }
+float getMPUGyroY() { return mpu.getGyroY(); }
+float getMPUGyroZ() { return mpu.getGyroZ(); }
+
+// ============================================================
+// 加速度计数据（单位：g，1g = 9.81 m/s²）
+// ============================================================
+float getMPUAccelX() { return mpu.getAccX(); }
+float getMPUAccelY() { return mpu.getAccY(); }
+float getMPUAccelZ() { return mpu.getAccZ(); }
