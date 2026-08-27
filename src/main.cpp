@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 徐畅
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <Arduino.h>
 
 #include "Distance_check.h" //测量距离
@@ -14,7 +30,7 @@
 
 #include "newencoder.h" //编码器测速
 
-#include "Microros.h" //发布ros的
+#include "Microros.h" //发布ros话题
 
 #include "ConfigManager.h" //配网管理
 
@@ -41,7 +57,7 @@ volatile unsigned long lastCmdReceivedMs = 0;
 // ════════════════════════════════════════════════════════════
 static const char DEFAULT_SSID[] = "doomsday";
 static const char DEFAULT_PASS[] = "123123123";
-static const char DEFAULT_AGENT_IP[] = "10.87.104.51";
+static const char DEFAULT_AGENT_IP[] = "10.109.159.51";
 
 void setup()
 {

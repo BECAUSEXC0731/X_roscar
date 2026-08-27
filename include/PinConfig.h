@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 徐畅
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef PIN_CONFIG_H
 #define PIN_CONFIG_H
 
@@ -66,7 +82,6 @@
 #define CFG_BUTTON   11  //----------------------------------
 
 
-
 // ──────────────────────────────────────────────────────────────
 // 蜂鸣器
 // ──────────────────────────────────────────────────────────────
@@ -82,10 +97,6 @@
 
 // ──────────────────────────────────────────────────────────────
 // 雷达 (YDLIDAR X2/X2L 兼容, TTL UART 150000 波特)
-// 当前使用 GPIO43(TX) / GPIO44(RX)，本板已验证可用
-// 雷达 TX → ESP32 GPIO44 (RX), 雷达 RX → ESP32 GPIO43 (TX)
-// （若以后换板 GPIO44 被板载 CP2102 占用导致收不到数据，
-//   可改用干净的 GPIO10 作 RX，TX 用 GPIO12 以外的空闲脚）
 // ──────────────────────────────────────────────────────────────
 #define LIDAR_TX   43   // ESP32 发送 (接雷达 RX)
 #define LIDAR_RX   44   // ESP32 接收 (接雷达 TX)

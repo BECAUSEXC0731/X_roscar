@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 徐畅
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "Kinematics.h"
 #include "Pid_control.h"
 #include "Motor_control.h"
@@ -184,8 +200,8 @@ void micro_ros_task(void *arg)
     // ⚠️ 校验 Agent IP，无效时回退到默认值（防止 NVS 里存了损坏的 IP 导致连不上）
     if (!agent_ip.fromString(cfg.agent_ip))
     {
-        Serial.printf("[WARN] Agent IP 无效: '%s'，回退到默认 10.87.104.51\n", cfg.agent_ip);
-        agent_ip.fromString("10.87.104.51");
+        Serial.printf("[WARN] Agent IP 无效: '%s'，回退到默认 10.109.159.51\n", cfg.agent_ip);
+        agent_ip.fromString("10.109.159.51");
     }
     Serial.printf("[micro-ROS] Agent: %s:%u\n", agent_ip.toString().c_str(), agent_port);
     set_microros_wifi_transports(cfg.ssid, cfg.password, agent_ip, agent_port);
