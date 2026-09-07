@@ -12,9 +12,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "/home/xuchang/桌面/X_roscar/.pio/build/xc/firmware.elf",
+            "executable": "c:/Users/xc2xy/Desktop/Platformi_PROJECT/X_roscar/.pio/build/xc/firmware.elf",
             "projectEnvName": "xc",
-            "toolchainBinDir": "/home/xuchang/.platformio/packages/toolchain-xtensa-esp32s3/bin",
+            "toolchainBinDir": "C:/Users/xc2xy/.platformio/packages/toolchain-xtensa-esp32s3/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -25,18 +25,18 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "/home/xuchang/桌面/X_roscar/.pio/build/xc/firmware.elf",
+            "executable": "c:/Users/xc2xy/Desktop/Platformi_PROJECT/X_roscar/.pio/build/xc/firmware.elf",
             "projectEnvName": "xc",
-            "toolchainBinDir": "/home/xuchang/.platformio/packages/toolchain-xtensa-esp32s3/bin",
+            "toolchainBinDir": "C:/Users/xc2xy/.platformio/packages/toolchain-xtensa-esp32s3/bin",
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "/home/xuchang/桌面/X_roscar/.pio/build/xc/firmware.elf",
+            "executable": "c:/Users/xc2xy/Desktop/Platformi_PROJECT/X_roscar/.pio/build/xc/firmware.elf",
             "projectEnvName": "xc",
-            "toolchainBinDir": "/home/xuchang/.platformio/packages/toolchain-xtensa-esp32s3/bin",
+            "toolchainBinDir": "C:/Users/xc2xy/.platformio/packages/toolchain-xtensa-esp32s3/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "loadMode": "manual"
         }
