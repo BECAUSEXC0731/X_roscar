@@ -54,14 +54,24 @@ void ConfigManager::startAP()
     configMode_ = true;
 
     WiFi.mode(WIFI_AP);
-    WiFi.softAP("CAR_CONFIG");
+    delay(100);
+
+    bool ok = WiFi.softAP("CAR_CONFIG");
+    if (!ok) {
+        // 之前还处于 STA 连接中/驱动状态异常时，第一次起热点可能失败，重试一次
+        Serial.println("⚠️ softAP 启动失败，重试...");
+        WiFi.softAPdisconnect(true);
+        delay(200);
+        WiFi.mode(WIFI_AP);
+        delay(100);
+        ok = WiFi.softAP("CAR_CONFIG");
+    }
 
     IPAddress apIP = WiFi.softAPIP();
     Serial.println("\n========================================");
-    Serial.println("配网模式已启动");
+    Serial.printf("配网模式已启动 (softAP: %s)\n", ok ? "OK" : "失败！");
     Serial.println("手机连接热点: CAR_CONFIG（无密码）");
-    Serial.print("  打开浏览器访问: http://");
-    Serial.println(apIP);
+    Serial.printf("  打开浏览器访问: http://%s\n", apIP.toString().c_str());
     Serial.println("========================================\n");
 
     server_ = new WebServer(80);

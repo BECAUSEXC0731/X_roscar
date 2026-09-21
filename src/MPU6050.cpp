@@ -26,6 +26,7 @@
 #include "Wire.h"
 #include <MPU6050_light.h>
 #include "PinConfig.h"
+#include "SelfCheck.h"   // beepBuzzer
 MPU6050 mpu(Wire);
 
 
@@ -33,21 +34,35 @@ void MPU6050_Init() {
   
   Wire.begin(MPU_SDA, MPU_SCL);         //初始化I2C总线
   
-  byte status = mpu.begin();
- Serial.print("MPU6050 status: ");
+  // ⚠️ 老代码这里是 while(status!=0){}：MPU 一旦读不到就整机静默卡死，
+  //    表现为"车完全没自启也不报错"。改成有限重试 + 明确报警，不再死等。
+  byte status = 0xFF;
+  for (uint8_t i = 1; i <= 3; i++) {
+    status = mpu.begin();
+    if (status == 0) break;
+    Serial.printf("MPU6050 begin 失败(status=%u)，重试 %u/3\n", status, i);
+    delay(100);
+  }
 
-  while(status!=0){ } // stop everything if could not connect to MPU6050
+  if (status != 0) {
+    Serial.println("❌ MPU6050 未检测到！继续启动（姿态数据无效，OLED 也可能不亮）");
+    beepBuzzer(600);    // 长鸣一声提示，没有串口时也能听到
+  }
 
   // ── 启用 I2C 旁路模式（Bypass）─────────────────────────
   // 设置 INT_PIN_CFG 寄存器(0x37) 的 bit 1 (BYPASS_EN = 0x02)
   // 使 MPU6050 将主 I2C 直通到 XDA/XCL，ESP32 可直接访问 OLED
   mpu.writeData(0x37, 0x02);
   Serial.println("I2C Bypass enabled (OLED via MPU XDA/XCL)");
-  
-  Serial.print("Calculating offsets, do not move MPU6050");
-  delay(1000);
-  mpu.calcOffsets(true,true); // 校准角速度和加速度-------------------------------------------
- Serial.print("Done!\n");
+
+  // MPU 没读到就别做偏移校准了：校准要跑上千次读数，每次都要等 I2C 超时，
+  // 会白白卡住几十秒到几分钟
+  if (status == 0) {
+    Serial.print("Calculating offsets, do not move MPU6050");
+    delay(1000);
+    mpu.calcOffsets(true,true); // 校准角速度和加速度-------------------------------------------
+    Serial.print("Done!\n");
+  }
   
 }
 

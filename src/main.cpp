@@ -44,6 +44,8 @@
 
 #include "WiFi.h"
 
+#include <Wire.h>          // 配网模式下直接点亮 OLED 需要
+
 My_motor my_motor[4];                   // 电机实例化
 PID_run run[4];                         // 使用PID控制电机
 extern float Velocity[4];               // 拿到测量后的速度
@@ -53,33 +55,80 @@ extern PIDController pid_controller[4]; // PID控制器实例化
 volatile unsigned long lastCmdReceivedMs = 0;
 
 // ════════════════════════════════════════════════════════════
-//  默认 WiFi 配置
+//  默认 WiFi 配置（仅当 NVS 为空时生效）
 // ════════════════════════════════════════════════════════════
 static const char DEFAULT_SSID[] = "doomsday";
 static const char DEFAULT_PASS[] = "123123123";
-static const char DEFAULT_AGENT_IP[] = "10.109.159.51";
+static const char DEFAULT_AGENT_IP[] = "10.248.143.51";
+
+// 正常启动等待 WiFi 的最长时间；超时自动进入配网模式（绝不无限死等）
+static const uint32_t WIFI_CONNECT_TIMEOUT_MS = 20000;
+
+// 配网键需要连续按住的时长（去抖 / 防误触）
+static const uint32_t CFG_BUTTON_HOLD_MS = 300;
+
+// ── 判断配网键是否被持续按住 ────────────────────────────────
+static bool isCfgButtonHeld(uint32_t holdMs)
+{
+    pinMode(CFG_BUTTON, INPUT_PULLUP);
+    uint32_t start = millis();
+    while (millis() - start < holdMs) {
+        if (digitalRead(CFG_BUTTON) != LOW) return false;  // 中途变高 → 视为没按
+        delay(1);
+    }
+    return true;
+}
+
+// ── 独立点亮 OLED ───────────────────────────────────────────
+static void oledBeginViaBypass()
+{
+    Wire.begin(MPU_SDA, MPU_SCL);
+    Wire.beginTransmission(0x68);   // MPU6050
+    Wire.write(0x37);               // INT_PIN_CFG
+    Wire.write(0x02);               // BYPASS_EN
+    Wire.endTransmission();
+    delay(10);
+
+    oledDisplay.begin();            // 失败自己会打印日志，不影响后续
+}
+
+// ── 进入配网模式（永不返回）────────────────────────────────
+static void enterConfigMode(const char *reason)
+{
+    Serial.printf("\n[配网] 进入配网模式（原因：%s）\n", reason);
+
+    // 蜂鸣器 3 短鸣 + OLED 提示，没有串口也能确认状态
+    for (int i = 0; i < 3; i++) {
+        beepBuzzer(100);
+        delay(150);
+    }
+    oledBeginViaBypass();
+    oledDisplay.showInitMessage("== CONFIG MODE ==\nAP: CAR_CONFIG\n192.168.4.1");
+
+    configManager.startAP();
+    configManager.clearConfig();
+
+    while (true) {
+        configManager.handleClient();
+        delay(2);   // 让出 CPU，避免独占 core1 饿死 idle 任务 / 影响 USB-CDC
+    }
+}
 
 void setup()
 {
-    // 读配置按键（GPIO11，接地清空配置并进入配网模式）
-    pinMode(CFG_BUTTON, INPUT_PULLUP);
-    delay(5);
-    bool cfgBtnPressed = (digitalRead(CFG_BUTTON) == LOW);
-
-    Serial.begin(115200);  // UART0 → 连接到板子的 UART USB 口（稳定不掉线）
+    Serial.begin(115200);  // 原生 USB-CDC → 插板子的 USB 口（稳定不掉线）
     delay(500);
+
+    // ── 读配置按键（GPIO11 接地 → 清空配置并进入配网模式）──
+    bool cfgBtnPressed = isCfgButtonHeld(CFG_BUTTON_HOLD_MS);
+    Serial.printf("\n[BOOT] 配网键%s\n",
+                  cfgBtnPressed ? "已按下 → 配网模式" : "未按下 → 正常启动");
 
     //初始化配置管理器（NVS 读写，必须在 configManager 其他调用之前）
     configManager.begin();
 
     if (cfgBtnPressed) {
-        Serial.println("清空配置并进入配网模式");
-        configManager.clearConfig();
-        configManager.startAP();
-        while (true) {
-            configManager.handleClient();
-        }
-        return;
+        enterConfigMode("按住配网键复位");
     }
 
     // NVS 为空时用编译时的默认配置
@@ -89,17 +138,25 @@ void setup()
     ConfigData cfg = configManager.getConfig();
     Serial.printf("使用配置: SSID=%s, Agent IP=%s\n", cfg.ssid, cfg.agent_ip);
 
-    xTaskCreate(micro_ros_task, "uros_task", 32768, NULL, 1, NULL); // 发布话题=============================
+    xTaskCreate(micro_ros_task, "uros_task", 32768, NULL, 1, NULL); // micro-ROS 任务
 
+    // ── 连接 WiFi：带超时，连不上就自动进配网，绝不无限死等 ──
+    WiFi.mode(WIFI_STA);
     WiFi.begin(cfg.ssid, cfg.password);
+    Serial.printf("正在连接热点 %s ", cfg.ssid);
+
+    uint32_t wifiStart = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
+        if (millis() - wifiStart > WIFI_CONNECT_TIMEOUT_MS) {
+            Serial.printf("\n❌ 热点 %s 连接超时(%us)\n",
+                          cfg.ssid, (unsigned)(WIFI_CONNECT_TIMEOUT_MS / 1000));
+            enterConfigMode("WiFi 连接超时");
+        }
         delay(500);
         Serial.print("."); // wifi初始化
     }
-    Serial.println("\nWiFi connected!");
-    Serial.print("ESP32 IP: ");
-    Serial.println(WiFi.localIP()); // 打印wifi的ip
+    Serial.printf("\nWiFi connected! ESP32 IP: %s\n", WiFi.localIP().toString().c_str());
 
     // ── MPU6050 初始化（同时初始化 I2C 总线 & 启用 Bypass 模式）─
     MPU6050_Init(); // 初始化MPU6050
@@ -110,7 +167,7 @@ void setup()
     delay(500);
     oledDisplay.setIP(WiFi.localIP().toString().c_str());
 
-    Distance_chect_Init();//初始化测距模块
+    // Distance_chect_Init();//初始化测距模块
 
     Encoder_Init(); // 编码器初始化
 
@@ -120,7 +177,7 @@ void setup()
 
     Lidar_Init();          // 雷达初始化 (UART1, 150000 波特)
 
-    Servo_init();          // 舵机初始化
+    // Servo_init();          // 舵机初始化
 
     // ── 上电自检 ──────────────────────────────────────────
     bool selfCheckPass = runSelfCheck();
@@ -144,8 +201,8 @@ void setup()
     // ── 电源指示灯：BAT_VOLTAGE_PIN 输出低电平常亮 ────────
     pinMode(BAT_VOLTAGE_PIN, OUTPUT);
     digitalWrite(BAT_VOLTAGE_PIN, LOW);
-
 }
+
 void loop()
 {
     // ── STATUS 指示灯：收到 cmd_vel 后亮 150ms 后熄灭 ────
@@ -155,25 +212,10 @@ void loop()
 
     // ── 更新 MPU 姿态数据（每次 loop 都需要调用）───────────
     updateMPU();
-
-    // 测姿态-----------------------------------------------------------------------------------------------------------------------------------------------
     MPU6050_check();
 
-    // 测距离------------------------------------------------------------------------------------------------------------------------------------------------------
-    float distance = Distance_chect();
-    Serial.print("距离：");
-    Serial.print(distance);
-    Serial.println("cm");
-
-    // 测速度-----------------------------------------------------------------------------------------------------------------------------------------------
-    // Encoder_Check();
+    // ── 测速 + 四轮 PID 闭环 ──────────────────────────────
     Velocity_Check();
-
-    // ── 计算综合速度（4 轮速度绝对值的平均值）───────────────
-    float combinedSpeed = (fabs(Velocity[0]) + fabs(Velocity[1])
-                         + fabs(Velocity[2]) + fabs(Velocity[3])) / 4.0f;
-
-    // Pid_controller_run(250); //测试轮子的正反
 
     run[0].Pid_run_();
     run[1].Pid_run_();
