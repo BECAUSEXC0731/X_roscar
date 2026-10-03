@@ -126,10 +126,16 @@ void timer_callback(rcl_timer_t *timer1, int64_t last_call_time)
     // ── 发布雷达扫描 (sensor_msgs/LaserScan) ──────────────
     if (Lidar_isScanReady())
     {
-        Lidar_getScan(msg_scan.ranges.data, NULL);
+        uint32_t scan_start_ms = 0;
+        Lidar_getScan(msg_scan.ranges.data, &scan_start_ms);
 
-        msg_scan.header.stamp.sec = static_cast<int32_t>(stamp / 1000);
-        msg_scan.header.stamp.nanosec = static_cast<uint32_t>(stamp % 1000) * 1e6;
+        // 用「采集时刻」而不是「发布时刻」打时间戳：
+        // scan_start_ms 是这一圈开始时的 millis()，反推出它对应的 epoch 时间。
+        // 发布定时器 50ms、扫描 200ms，用发布时刻会让点云和位姿最多差 ~250ms
+        int64_t scan_stamp_ms = rmw_uros_epoch_millis() - (int64_t)(millis() - scan_start_ms);
+        if (scan_stamp_ms < 0) scan_stamp_ms = 0;
+        msg_scan.header.stamp.sec     = (int32_t)(scan_stamp_ms / 1000);
+        msg_scan.header.stamp.nanosec = (uint32_t)((scan_stamp_ms % 1000) * 1000000);
 
         if (rcl_publish(&pub_scan, &msg_scan, NULL) != RCL_RET_OK)
         {
@@ -264,12 +270,14 @@ void micro_ros_task(void *arg)
     //初始化雷达扫描发布者 (sensor_msgs/LaserScan)
     msg_scan.header.frame_id = micro_ros_string_utilities_set(msg_scan.header.frame_id, "laser_frame");
     msg_scan.angle_min = 0.0f;
-    msg_scan.angle_max = 2.0f * PI;
     msg_scan.angle_increment = (2.0f * PI) / LIDAR_SCAN_SIZE;
+    // angle_max 应为「最后一个点的角度」= angle_min + (N-1)*increment；
+    // 写成 2π 会隐含 N+1 个点，按 (max-min)/increment+1 算点数的消费者会错位
+    msg_scan.angle_max = 2.0f * PI - msg_scan.angle_increment;
     msg_scan.time_increment = (1.0f / 5.0f) / LIDAR_SCAN_SIZE; // 5Hz
     msg_scan.scan_time = 1.0f / 5.0f;
-    msg_scan.range_min = 0.05f;
-    msg_scan.range_max = 8.0f;
+    msg_scan.range_min = LIDAR_RANGE_MIN_M;   // 与解析阶段的有效量程窗口保持一致
+    msg_scan.range_max = LIDAR_RANGE_MAX_M;
 
     // 为 ranges 动态数组分配内存 (LIDAR_SCAN_SIZE 个 float)
     msg_scan.ranges.data = (float *)malloc(sizeof(float) * LIDAR_SCAN_SIZE);

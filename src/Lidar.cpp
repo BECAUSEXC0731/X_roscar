@@ -73,6 +73,71 @@ static inline uint16_t bytesToUint16(const uint8_t *data, size_t index)
     return (uint16_t)((uint16_t)(data[index + 1]) << 8) | data[index];
 }
 
+#if LIDAR_FILTER_ENABLE
+/**
+ * 半径离群滤波：就地剔除孤立噪点
+ * 与树莓派版 lidar_node.cpp 的 removeOutliers() 等价，只是直接在格索引上做：
+ * 某点在 radius 内的邻居（含自身）少于 min_neighbors 个 → 判为噪点。
+ * 一圈 200~360 点，暴力两两比较约 6~13 万次，5Hz 下 CPU 占用 <2%。
+ */
+static void removeOutliers()
+{
+    // 先把有效格转成笛卡尔坐标，避免 N² 循环里反复算 sin/cos
+    static float   xs[LIDAR_SCAN_SIZE];
+    static float   ys[LIDAR_SCAN_SIZE];
+    static int16_t bin[LIDAR_SCAN_SIZE];
+
+    int n = 0;
+    for (int i = 0; i < LIDAR_SCAN_SIZE; i++) {
+        float d = scan_ranges_[i];
+        if (!isfinite(d)) continue;
+        float a = (float)i * ANGLE_INCREMENT;
+        xs[n] = d * cosf(a);
+        ys[n] = d * sinf(a);
+        bin[n] = (int16_t)i;
+        n++;
+    }
+
+    const float r2 = LIDAR_FILTER_RADIUS_M * LIDAR_FILTER_RADIUS_M;
+
+    for (int i = 0; i < n; i++) {
+        int neighbors = 1;                     // 自己算一个
+        for (int j = 0; j < n; j++) {
+            if (j == i) continue;
+            float dx = xs[i] - xs[j];
+            float dy = ys[i] - ys[j];
+            if (dx * dx + dy * dy < r2 && ++neighbors >= LIDAR_FILTER_MIN_NEIGHBORS) break;
+        }
+        if (neighbors < LIDAR_FILTER_MIN_NEIGHBORS) {
+            scan_ranges_[bin[i]] = INFINITY;   // 孤立点 → 丢弃
+        }
+    }
+}
+#endif // LIDAR_FILTER_ENABLE
+
+/** 一圈结束：滤波 → 拷到就绪缓冲，供 micro-ROS 侧取用 */
+static void finishScan()
+{
+    int valid = 0;
+    for (int i = 0; i < LIDAR_SCAN_SIZE; i++) {
+        if (isfinite(scan_ranges_[i])) valid++;
+    }
+
+    // 有效点太少 → 这一圈不可信，不要拿它去污染地图
+    if (valid < LIDAR_MIN_VALID_POINTS) {
+        Serial.printf("[Lidar] 本圈仅 %d 个有效点，丢弃\n", valid);
+        return;
+    }
+
+#if LIDAR_FILTER_ENABLE
+    removeOutliers();
+#endif
+
+    memcpy(scan_ready_ranges_, scan_ranges_, sizeof(scan_ready_ranges_));
+    scan_timestamp_ms_ = scan_start_ms_;
+    scan_ready_ = true;
+}
+
 /** 解析一帧数据包，写入 720 点扫描缓冲 */
 static void parsePacket(const uint8_t *packet_data)
 {
@@ -124,35 +189,34 @@ static void parsePacket(const uint8_t *packet_data)
         if (final_angle_deg < 0.0f) final_angle_deg += 360.0f;
         float angle_rad = final_angle_deg * PI / 180.0f;
 
-        if (distance_m > 0.01f) {
-            // ── 检测过零（一圈结束）──
-            if (angle_rad < last_point_angle_ - PI) {
-                if (scan_count_ > 0) {
-                    // 上一圈已完整：拷到就绪缓冲
-                    memcpy(scan_ready_ranges_, scan_ranges_, sizeof(scan_ready_ranges_));
-                    scan_timestamp_ms_ = scan_start_ms_;
-                    scan_ready_ = true;
-                }
-                scan_count_++;
-                // 重置缓冲，开始新一圈
-                for (int k = 0; k < LIDAR_SCAN_SIZE; k++) scan_ranges_[k] = INFINITY;
-                first_packet_of_scan_ = true;
-                scan_start_ms_ = millis();
+        // ── 过零检测（一圈结束）─────────────────────────────
+        // 只看角度、不看距离是否有效：整片区域测不到点时也能正常收圈
+        if (angle_rad < last_point_angle_ - PI) {
+            if (scan_count_ > 0) {
+                finishScan();   // 结算上一圈（滤波后拷到就绪缓冲）
             }
+            scan_count_++;
+            // 重置缓冲，开始新一圈
+            for (int k = 0; k < LIDAR_SCAN_SIZE; k++) scan_ranges_[k] = INFINITY;
+            first_packet_of_scan_ = true;
+            scan_start_ms_ = millis();
+        }
+        last_point_angle_ = angle_rad;
 
-            // ── 映射到 720 索引（与 lidar_node.cpp 一致）──
-            float index_angle = 2.0f * PI - angle_rad;
-            if (index_angle >= 2.0f * PI) index_angle -= 2.0f * PI;
-            if (index_angle < 0.0f)       index_angle += 2.0f * PI;
+        // ── 量程窗口：盲区内 / 超量程的读数基本都是噪声，直接丢 ──
+        if (distance_m < LIDAR_RANGE_MIN_M || distance_m > LIDAR_RANGE_MAX_M) continue;
 
-            int index = (int)roundf(index_angle / ANGLE_INCREMENT);
-            if (index >= LIDAR_SCAN_SIZE) index = 0;
-            if (index >= 0 && index < LIDAR_SCAN_SIZE) {
-                if (scan_ranges_[index] == INFINITY || distance_m < scan_ranges_[index]) {
-                    scan_ranges_[index] = distance_m;
-                }
+        // ── 映射到格索引，格内取最近值（与 lidar_node.cpp 一致）──
+        float index_angle = 2.0f * PI - angle_rad;
+        if (index_angle >= 2.0f * PI) index_angle -= 2.0f * PI;
+        if (index_angle < 0.0f)       index_angle += 2.0f * PI;
+
+        int index = (int)roundf(index_angle / ANGLE_INCREMENT);
+        if (index >= LIDAR_SCAN_SIZE) index = 0;
+        if (index >= 0 && index < LIDAR_SCAN_SIZE) {
+            if (scan_ranges_[index] == INFINITY || distance_m < scan_ranges_[index]) {
+                scan_ranges_[index] = distance_m;
             }
-            last_point_angle_ = angle_rad;
         }
     }
 }

@@ -59,7 +59,7 @@ volatile unsigned long lastCmdReceivedMs = 0;
 // ════════════════════════════════════════════════════════════
 static const char DEFAULT_SSID[] = "doomsday";
 static const char DEFAULT_PASS[] = "123123123";
-static const char DEFAULT_AGENT_IP[] = "10.248.143.51";
+static const char DEFAULT_AGENT_IP[] = "10.136.202.51";
 
 // 正常启动等待 WiFi 的最长时间；超时自动进入配网模式（绝不无限死等）
 static const uint32_t WIFI_CONNECT_TIMEOUT_MS = 20000;
@@ -77,6 +77,13 @@ static bool isCfgButtonHeld(uint32_t holdMs)
         delay(1);
     }
     return true;
+}
+
+// ── 进配网前刹住四个轮子 ────────────────────────────────────
+// enterConfigMode() 不会返回，loop()/PID 停了但 PWM 会保持最后一个值，车会一直跑
+static void stopAllMotors()
+{
+    for (int id = 1; id <= 4; id++) my_motor[0].Motor_Brake(id);
 }
 
 // ── 独立点亮 OLED ───────────────────────────────────────────
@@ -119,10 +126,8 @@ void setup()
     Serial.begin(115200);  // 原生 USB-CDC → 插板子的 USB 口（稳定不掉线）
     delay(500);
 
-    // ── 读配置按键（GPIO11 接地 → 清空配置并进入配网模式）──
+    // 上电时按住配网键 → 直接进配网
     bool cfgBtnPressed = isCfgButtonHeld(CFG_BUTTON_HOLD_MS);
-    Serial.printf("\n[BOOT] 配网键%s\n",
-                  cfgBtnPressed ? "已按下 → 配网模式" : "未按下 → 正常启动");
 
     //初始化配置管理器（NVS 读写，必须在 configManager 其他调用之前）
     configManager.begin();
@@ -201,6 +206,12 @@ void setup()
     // ── 电源指示灯：BAT_VOLTAGE_PIN 输出低电平常亮 ────────
     pinMode(BAT_VOLTAGE_PIN, OUTPUT);
     digitalWrite(BAT_VOLTAGE_PIN, LOW);
+
+    // 初始化完成后按下配网键 → 刹车 + 进配网（不用掐上电时机）
+    if (isCfgButtonHeld(CFG_BUTTON_HOLD_MS)) {
+        stopAllMotors();
+        enterConfigMode("初始化完成后按下配网键");
+    }
 }
 
 void loop()
