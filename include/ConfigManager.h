@@ -48,7 +48,7 @@ private:
     void handleRoot();      // Web: 配置页
     void handleSave();      // Web: 保存配置
     void handleNotFound();  // Web: 404
-    void saveToNVS();
+    bool saveToNVS();       // 写 NVS，返回是否成功
     bool loadFromNVS();
 };
 

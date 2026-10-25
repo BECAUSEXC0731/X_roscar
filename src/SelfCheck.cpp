@@ -33,18 +33,13 @@ bool runSelfCheck()
     digitalWrite(STUTS, LOW);
     Serial.println("[自检] STATUS LED 引脚 OK");
 
-    // 3. 检查电源指示灯引脚
-    pinMode(BAT_VOLTAGE_PIN, OUTPUT);
-    digitalWrite(BAT_VOLTAGE_PIN, LOW);
-    Serial.println("[自检] 电源指示灯引脚 OK");
-
-    // 4. MPU6050 已在初始化时检查过（状态通过则正常）
+    // 3. MPU6050 已在初始化时检查过（状态通过则正常）
     Serial.println("[自检] MPU6050 OK");
 
-    // 5. 编码器已初始化
+    // 4. 编码器已初始化
     Serial.println("[自检] 编码器 OK");
 
-    // 6. 电机已初始化
+    // 5. 电机已初始化
     Serial.println("[自检] 电机 OK");
 
     Serial.println("=============================");

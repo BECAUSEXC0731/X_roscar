@@ -20,21 +20,27 @@
 #include "Arduino.h"
 #include "Pid_control.h"
 
+
+
 #define KP1 0.28
-#define KI1 0.10
-#define KD1 0.01
+#define KI1 0.03
+#define KD1 0.0
 
 #define KP2 0.254
-#define KI2 0.08
-#define KD2 0.05
+#define KI2 0.03
+#define KD2 0.0
 
 #define KP3 0.255
-#define KI3 0.08
-#define KD3 0.01
+#define KI3 0.03
+#define KD3 0.0
 
 #define KP4 0.255
-#define KI4 0.09
-#define KD4 0.01
+#define KI4 0.03
+#define KD4 0.0
+
+
+
+
 
 #define LIMIT 100
 

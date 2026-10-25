@@ -161,12 +161,23 @@ void ConfigManager::handleSave()
     strncpy(config_.password, pass.c_str(), sizeof(config_.password) - 1);
     strncpy(config_.agent_ip, ip.c_str(),   sizeof(config_.agent_ip) - 1);
 
-    saveToNVS();
+    bool saved = saveToNVS();
 
-    server_->send(200, "text/html",
-        "<html><body style='font-family:Arial;margin:40px;text-align:center'>"
-        "<h3>✅ 配置已保存！正在重启...</h3>"
-        "<p>小车将自动连接热点并运行</p></body></html>");
+    // 把真正写进去的内容回显到网页上，避免"以为存好了其实没有"
+    String msg = "<html><body style='font-family:Arial;margin:40px;text-align:center'>";
+    if (saved) {
+        msg += "<h3>✅ 配置已保存</h3><p>SSID: <b>" + ssid + "</b><br>密码长度: " +
+               String(pass.length()) + "<br>Agent IP: <b>" + ip + "</b></p>" +
+               "<p>重启后将连接这个热点<br>（必须是 <b>2.4GHz</b> 热点，ESP32 不支持 5GHz）</p>" +
+               "<p>正在重启...</p>";
+    } else {
+        msg += "<h3>❌ 写入 NVS 失败</h3><p>配置没有保存，请重试</p><a href='/'>← 返回</a>";
+    }
+    msg += "</body></html>";
+    server_->send(200, "text/html", msg);
+
+    if (!saved) return;     // 没存进去就别重启，免得又回到配网
+
     delay(1000);
     ESP.restart();
 }
@@ -195,17 +206,30 @@ void ConfigManager::setDefaults(const char *ssid, const char *pass, const char *
 // ============================================================
 // NVS 读写
 // ============================================================
-void ConfigManager::saveToNVS()
+bool ConfigManager::saveToNVS()
 {
     nvs_handle_t nvs;
-    if (nvs_open("config", NVS_READWRITE, &nvs) == ESP_OK) {
-        nvs_set_str(nvs, "ssid", config_.ssid);
-        nvs_set_str(nvs, "pass", config_.password);
-        nvs_set_str(nvs, "ip",   config_.agent_ip);
-        nvs_commit(nvs);
-        nvs_close(nvs);
-        Serial.println("✅ 配置已保存到 NVS 闪存");
+    if (nvs_open("config", NVS_READWRITE, &nvs) != ESP_OK) {
+        Serial.println("❌ NVS 打不开，配置保存失败");
+        return false;
     }
+
+    esp_err_t e_ssid = nvs_set_str(nvs, "ssid", config_.ssid);
+    esp_err_t e_pass = nvs_set_str(nvs, "pass", config_.password);
+    esp_err_t e_ip   = nvs_set_str(nvs, "ip",   config_.agent_ip);
+    esp_err_t e_cmt  = nvs_commit(nvs);
+    nvs_close(nvs);
+
+    if (e_ssid != ESP_OK || e_pass != ESP_OK || e_ip != ESP_OK || e_cmt != ESP_OK) {
+        Serial.printf("❌ 配置写入失败: ssid=%d pass=%d ip=%d commit=%d\n",
+                      (int)e_ssid, (int)e_pass, (int)e_ip, (int)e_cmt);
+        return false;
+    }
+
+    // 只打印密码长度，不打印密码本身
+    Serial.printf("✅ 配置已保存到 NVS: SSID=%s, 密码长度=%u, Agent IP=%s\n",
+                  config_.ssid, (unsigned)strlen(config_.password), config_.agent_ip);
+    return true;
 }
 
 bool ConfigManager::loadFromNVS()

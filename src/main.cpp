@@ -64,16 +64,32 @@ static const char DEFAULT_AGENT_IP[] = "10.136.202.51";
 // 正常启动等待 WiFi 的最长时间；超时自动进入配网模式（绝不无限死等）
 static const uint32_t WIFI_CONNECT_TIMEOUT_MS = 20000;
 
-// 配网键需要连续按住的时长（去抖 / 防误触）
+// ── 配网键 ──────────────────────────────────────────────────
+// 按下/松开对应的电平（极性在 PinConfig.h 里用 CFG_BUTTON_ACTIVE_LOW 切换）
+#if CFG_BUTTON_ACTIVE_LOW
+  #define CFG_BTN_PRESSED  LOW
+#else
+  #define CFG_BTN_PRESSED  HIGH
+#endif
+
+// 连续按住多久才算一次有效按键（防抖）
 static const uint32_t CFG_BUTTON_HOLD_MS = 300;
 
-// ── 判断配网键是否被持续按住 ────────────────────────────────
+static void cfgButtonInit()
+{
+#if CFG_BUTTON_ACTIVE_LOW
+    pinMode(CFG_BUTTON, INPUT_PULLUP);
+#else
+    pinMode(CFG_BUTTON, INPUT_PULLDOWN);
+#endif
+}
+
+// 当前是否正被按住（连续 holdMs 都是"按下"电平）
 static bool isCfgButtonHeld(uint32_t holdMs)
 {
-    pinMode(CFG_BUTTON, INPUT_PULLUP);
     uint32_t start = millis();
     while (millis() - start < holdMs) {
-        if (digitalRead(CFG_BUTTON) != LOW) return false;  // 中途变高 → 视为没按
+        if (digitalRead(CFG_BUTTON) != CFG_BTN_PRESSED) return false;
         delay(1);
     }
     return true;
@@ -112,8 +128,9 @@ static void enterConfigMode(const char *reason)
     oledBeginViaBypass();
     oledDisplay.showInitMessage("== CONFIG MODE ==\nAP: CAR_CONFIG\n192.168.4.1");
 
+    // 保留上次的配置作为网页默认值：不用重打一遍，
+    // 也能一眼看出"刚才连不上的到底是哪个 SSID、密码长度对不对"
     configManager.startAP();
-    configManager.clearConfig();
 
     while (true) {
         configManager.handleClient();
@@ -121,27 +138,43 @@ static void enterConfigMode(const char *reason)
     }
 }
 
+static void checkCfgButton()
+{
+    static bool seenIdle = false;    // 先见到过"松开"状态，才认可后面的按下
+
+    if (digitalRead(CFG_BUTTON) != CFG_BTN_PRESSED) {
+        seenIdle = true;
+        return;
+    }
+    if (!seenIdle) return;           // 一直是"按下"电平 → 判定为接线/极性不对，不动作
+    if (!isCfgButtonHeld(CFG_BUTTON_HOLD_MS)) return;
+
+    seenIdle = false;
+    stopAllMotors();
+    enterConfigMode("按下配网键");
+}
+
 void setup()
 {
     Serial.begin(115200);  // 原生 USB-CDC → 插板子的 USB 口（稳定不掉线）
     delay(500);
 
-    // 上电时按住配网键 → 直接进配网
-    bool cfgBtnPressed = isCfgButtonHeld(CFG_BUTTON_HOLD_MS);
+    // 配网键：打印当前电平，用来核对极性（按下时应为 CFG_BTN_PRESSED）
+    cfgButtonInit();
+    delay(50);
+    Serial.printf("配网键 GPIO%d 当前电平=%d，按下时应为 %d\n",
+                  CFG_BUTTON, digitalRead(CFG_BUTTON), (int)CFG_BTN_PRESSED);
 
     //初始化配置管理器（NVS 读写，必须在 configManager 其他调用之前）
     configManager.begin();
-
-    if (cfgBtnPressed) {
-        enterConfigMode("按住配网键复位");
-    }
 
     // NVS 为空时用编译时的默认配置
     configManager.setDefaults(DEFAULT_SSID, DEFAULT_PASS, DEFAULT_AGENT_IP);
 
     //已有配置就正常启动
     ConfigData cfg = configManager.getConfig();
-    Serial.printf("使用配置: SSID=%s, Agent IP=%s\n", cfg.ssid, cfg.agent_ip);
+    Serial.printf("使用配置: SSID=%s, 密码长度=%u, Agent IP=%s\n",
+                  cfg.ssid, (unsigned)strlen(cfg.password), cfg.agent_ip);
 
     xTaskCreate(micro_ros_task, "uros_task", 32768, NULL, 1, NULL); // micro-ROS 任务
 
@@ -202,20 +235,13 @@ void setup()
     // 初始化 STATUS 指示灯
     pinMode(STUTS, OUTPUT);
     digitalWrite(STUTS, LOW);
-
-    // ── 电源指示灯：BAT_VOLTAGE_PIN 输出低电平常亮 ────────
-    pinMode(BAT_VOLTAGE_PIN, OUTPUT);
-    digitalWrite(BAT_VOLTAGE_PIN, LOW);
-
-    // 初始化完成后按下配网键 → 刹车 + 进配网（不用掐上电时机）
-    if (isCfgButtonHeld(CFG_BUTTON_HOLD_MS)) {
-        stopAllMotors();
-        enterConfigMode("初始化完成后按下配网键");
-    }
 }
 
 void loop()
 {
+    // ── 配网键：运行中按下就进配网（刹车后不返回）──────────
+    checkCfgButton();
+
     // ── STATUS 指示灯：收到 cmd_vel 后亮 150ms 后熄灭 ────
     if (millis() - lastCmdReceivedMs > 150) {
         digitalWrite(STUTS, LOW);
@@ -223,7 +249,7 @@ void loop()
 
     // ── 更新 MPU 姿态数据（每次 loop 都需要调用）───────────
     updateMPU();
-    MPU6050_check();
+    //MPU6050_check();
 
     // ── 测速 + 四轮 PID 闭环 ──────────────────────────────
     Velocity_Check();
