@@ -27,7 +27,6 @@ OledDisplay::OledDisplay()
     : display_(OLED_SCREEN_W, OLED_SCREEN_H, &Wire, OLED_RESET_PIN)
     , initialized_(false)
     , lastUpdateMs_(0)
-    , animFrame_(0)
 {
     ip_[0] = '\0';
 }
@@ -91,21 +90,23 @@ void OledDisplay::clear()
 }
 
 // ============================================================
-// 刷新界面：IP + 4 路轮速（带正负号）
-// 限频 20Hz（50ms）
+// 刷新界面：IP + 4 路轮速（带正负号）+ 航向角
+// 限频 10Hz（100ms）
 //
 // 布局（128×64 OLED）：
 //   行0 (y=0)  : IP: xxx.xxx.xxx.xxx
 //   行1 (y=14) : M1:+123  M2:-456
-//   行2 (y=28) : M3:+078  M4:-090
-//   行3 (y=44) : ● 弹跳小球动画
+//   行2 (y=30) : M3:+078  M4:-090
+//   行3 (y=44) : YAW:+123.4  MPU6050 偏航角
+//   行4 (y=54) : UP: HH:MM:SS 启动后运行时间
 // ============================================================
-void OledDisplay::updateDisplay(const float speeds[4])
+void OledDisplay::updateDisplay(const float speeds[4], float yawDeg)
 {
     if (!initialized_) return;
 
     unsigned long now = millis();
-    if (now - lastUpdateMs_ < 50) return;   // 20Hz 限频
+    // 整屏 I2C 刷新会阻塞约 20~30ms，降到 10Hz 以减小对控制环的干扰
+    if (now - lastUpdateMs_ < 100) return;  // 10Hz 限频
     lastUpdateMs_ = now;
 
     display_.clearDisplay();
@@ -138,17 +139,17 @@ void OledDisplay::updateDisplay(const float speeds[4])
     drawMiniBar(0, barY2, 60, 4, speeds[2], 300.0f);
     drawMiniBar(66, barY2, 60, 4, speeds[3], 300.0f);
 
-    // ── 底部动画：弹跳小球 ──────────────────────────────────
-    animFrame_++;
-    int ballRadius = 2;
-    int ballY = OLED_SCREEN_H - ballRadius - 1;
-    int period = 120;
-    int half    = period / 2;
-    int phase   = animFrame_ % period;
-    int ballX   = (phase < half)
-                  ? map(phase, 0, half - 1, ballRadius, OLED_SCREEN_W - ballRadius)
-                  : map(phase - half, 0, half - 1, OLED_SCREEN_W - ballRadius, ballRadius);
-    display_.fillCircle(ballX, ballY, ballRadius, SSD1306_WHITE);
+    // ── 第 3 行：MPU6050 航向角 ──────────────────────────────
+    snprintf(buf, sizeof(buf), "YAW:%+6.1f", yawDeg);
+    display_.setCursor(0, 44);
+    display_.print(buf);
+
+    // ── 底部：启动后运行时间 ────────────────────────────────
+    unsigned long upSec = millis() / 1000;
+    snprintf(buf, sizeof(buf), "UP: %02lu:%02lu:%02lu",
+             upSec / 3600, (upSec / 60) % 60, upSec % 60);
+    display_.setCursor(0, 54);
+    display_.print(buf);
 
     display_.display();
 }

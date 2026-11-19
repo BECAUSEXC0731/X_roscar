@@ -43,7 +43,7 @@ void MPU6050_Init() {
   for (uint8_t i = 1; i <= 3; i++) {
     status = mpu.begin();
     if (status == 0) break;
-    Serial.printf("MPU6050 begin 失败(status=%u)，重试 %u/3\n", status, i);
+    // Serial.printf("MPU6050 begin 失败(status=%u)，重试 %u/3\n", status, i);
     delay(100);
   }
 

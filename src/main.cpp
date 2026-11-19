@@ -26,8 +26,6 @@
 
 #include "Kinematics.h" //运动学正逆解
 
-#include "Servo.h" //舵机
-
 #include "newencoder.h" //编码器测速
 
 #include "Microros.h" //发布ros话题
@@ -104,6 +102,19 @@ static bool isCfgButtonHeld(uint32_t holdMs)
     return true;
 }
 
+// ── 电源指示灯 ──────────────────────────────────────────────
+// 上电后先保持熄灭，自检通过（初始化成功）后再点亮
+static void powerLedInit()
+{
+    pinMode(POWER_LED, OUTPUT);
+    digitalWrite(POWER_LED, !POWER_LED_ON);   // 先熄灭
+}
+
+static void powerLedOn()
+{
+    digitalWrite(POWER_LED, POWER_LED_ON);
+}
+
 // ── 进配网前刹住四个轮子 ────────────────────────────────────
 // enterConfigMode() 不会返回，loop()/PID 停了但 PWM 会保持最后一个值，车会一直跑
 static void stopAllMotors()
@@ -131,7 +142,7 @@ static void otaInit()
     });
 
     ArduinoOTA.onProgress([](unsigned int done, unsigned int total) {
-        Serial.printf("[OTA] %3u%%\r", total ? (unsigned)(done * 100u / total) : 0u);
+        // Serial.printf("[OTA] %3u%%\r", total ? (unsigned)(done * 100u / total) : 0u);
     });
 
     ArduinoOTA.onEnd([]() {
@@ -140,7 +151,7 @@ static void otaInit()
 
     ArduinoOTA.onError([](ota_error_t err) {
         otaStopAllMotion();
-        Serial.printf("\n[OTA] 升级失败 code=%u，已刹车，继续运行旧固件\n", (unsigned)err);
+        // Serial.printf("\n[OTA] 升级失败 code=%u，已刹车，继续运行旧固件\n", (unsigned)err);
         if (err == OTA_AUTH_ERROR)
             Serial.println("[OTA] → 密码错误：核对 platformio.ini 的 --auth 与 OTA_PASSWORD");
         else if (err == OTA_BEGIN_ERROR || err == OTA_CONNECT_ERROR)
@@ -152,8 +163,8 @@ static void otaInit()
     });
 
     ArduinoOTA.begin();
-    Serial.printf("[OTA] 已就绪：%s.local:3232（IP %s）\n",
-                  OTA_HOSTNAME, WiFi.localIP().toString().c_str());
+    // Serial.printf("[OTA] 已就绪：%s.local:3232（IP %s）\n",
+                  // OTA_HOSTNAME, WiFi.localIP().toString().c_str());
 }
 
 // ── 独立点亮 OLED ───────────────────────────────────────────
@@ -172,7 +183,7 @@ static void oledBeginViaBypass()
 // ── 进入配网模式（永不返回）────────────────────────────────
 static void enterConfigMode(const char *reason)
 {
-    Serial.printf("\n[配网] 进入配网模式（原因：%s）\n", reason);
+    // Serial.printf("\n[配网] 进入配网模式（原因：%s）\n", reason);
 
     // 蜂鸣器 3 短鸣 + OLED 提示，没有串口也能确认状态
     for (int i = 0; i < 3; i++) {
@@ -213,11 +224,14 @@ void setup()
     Serial.begin(115200);  // 原生 USB-CDC → 插板子的 USB 口（稳定不掉线）
     delay(500);
 
+    // 电源指示灯：初始化完成前保持熄灭（避免启动过程中误亮）
+    powerLedInit();
+
     // 配网键：打印当前电平，用来核对极性（按下时应为 CFG_BTN_PRESSED）
     cfgButtonInit();
     delay(50);
-    Serial.printf("配网键 GPIO%d 当前电平=%d，按下时应为 %d\n",
-                  CFG_BUTTON, digitalRead(CFG_BUTTON), (int)CFG_BTN_PRESSED);
+    // Serial.printf("配网键 GPIO%d 当前电平=%d，按下时应为 %d\n",
+                  // CFG_BUTTON, digitalRead(CFG_BUTTON), (int)CFG_BTN_PRESSED);
 
     //初始化配置管理器（NVS 读写，必须在 configManager 其他调用之前）
     configManager.begin();
@@ -227,8 +241,8 @@ void setup()
 
     //已有配置就正常启动
     ConfigData cfg = configManager.getConfig();
-    Serial.printf("使用配置: SSID=%s, 密码长度=%u, Agent IP=%s\n",
-                  cfg.ssid, (unsigned)strlen(cfg.password), cfg.agent_ip);
+    // Serial.printf("使用配置: SSID=%s, 密码长度=%u, Agent IP=%s\n",
+                  // cfg.ssid, (unsigned)strlen(cfg.password), cfg.agent_ip);
 
     // ── 把 NVS 里的运动学参数交给运动学模块（差速 / 麦克纳姆）──
     KinematicsConfig kin_cfg;
@@ -243,20 +257,20 @@ void setup()
     // ── 连接 WiFi：带超时，连不上就自动进配网，绝不无限死等 ──
     WiFi.mode(WIFI_STA);
     WiFi.begin(cfg.ssid, cfg.password);
-    Serial.printf("正在连接热点 %s ", cfg.ssid);
+    // Serial.printf("正在连接热点 %s ", cfg.ssid);
 
     uint32_t wifiStart = millis();
     while (WiFi.status() != WL_CONNECTED)
     {
         if (millis() - wifiStart > WIFI_CONNECT_TIMEOUT_MS) {
-            Serial.printf("\n❌ 热点 %s 连接超时(%us)\n",
-                          cfg.ssid, (unsigned)(WIFI_CONNECT_TIMEOUT_MS / 1000));
+            // Serial.printf("\n❌ 热点 %s 连接超时(%us)\n",
+                          // cfg.ssid, (unsigned)(WIFI_CONNECT_TIMEOUT_MS / 1000));
             enterConfigMode("WiFi 连接超时");
         }
         delay(500);
         Serial.print("."); // wifi初始化
     }
-    Serial.printf("\nWiFi connected! ESP32 IP: %s\n", WiFi.localIP().toString().c_str());
+    // Serial.printf("\nWiFi connected! ESP32 IP: %s\n", WiFi.localIP().toString().c_str());
 
     // ── MPU6050 初始化（同时初始化 I2C 总线 & 启用 Bypass 模式）─
     MPU6050_Init(); // 初始化MPU6050
@@ -277,8 +291,6 @@ void setup()
 
     Lidar_Init();          // 雷达初始化 (UART1, 150000 波特)
 
-    // Servo_init();          // 舵机初始化
-
     // ── 上电自检 ──────────────────────────────────────────
     bool selfCheckPass = runSelfCheck();
 
@@ -287,6 +299,8 @@ void setup()
         // 自检通过 → 蜂鸣器短鸣一声（200ms）
         oledDisplay.showInitMessage("SelfCheck OK");
         beepBuzzer(200);
+        // 自检通过 → 点亮电源指示灯（GPIO45 置低）
+        powerLedOn();
     } else {
         Serial.println("初始化异常！");
         oledDisplay.showInitMessage("SelfCheck FAIL");
@@ -319,16 +333,16 @@ void loop()
     updateMPU();
     //MPU6050_check();
 
-    // ── 测速 + 四轮 PID 闭环 ──────────────────────────────
-    Velocity_Check();
+    // ── 测速 + 四轮 PID 闭环：固定 20ms 周期（50Hz）──────
+    // Velocity_Check() 内部用固定窗口结算速度，只有产生了新速度才跑 PID，
+    // 避免 PID 频率跟随 loop 抖动，也避免对量化跳变的测量值做高频响应。
+    if (Velocity_Check()) {
+        run[0].Pid_run_();
+        run[1].Pid_run_();
+        run[2].Pid_run_();
+        run[3].Pid_run_();
+    }
 
-    run[0].Pid_run_();
-    run[1].Pid_run_();
-    run[2].Pid_run_();
-    run[3].Pid_run_();
-
-    // Servo_run();           // 舵机 UDP 控制
-
-    // ── OLED 刷新（4 路轮速带正负号）──────────────────────
-    oledDisplay.updateDisplay(Velocity);
+    // ── OLED 刷新（4 路轮速 + 航向角）──────────────────────
+    oledDisplay.updateDisplay(Velocity, getMPUYaw());
 }

@@ -59,7 +59,8 @@ float PIDController::update(float current)
     {
     error_sum_ = 0;
     // 对stop进行衰减，每次减少一定比例，直到小于某个阈值然后置0
-    stop = stop * 0.9;   // 或者0.8，根据需求调整
+    // PID 现在固定 50Hz 调用（原来约 500Hz），0.35 ≈ 原来 0.9 的时间常数
+    stop = stop * 0.35;
     if (fabs(stop) < 0.1) // 假设阈值0.1
         stop = 0;
 

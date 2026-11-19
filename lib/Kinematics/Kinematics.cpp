@@ -49,9 +49,9 @@ void Kinematics_SetConfig(const KinematicsConfig &cfg)
     if (cfg_.wheel_base < 0.0f) cfg_.wheel_base = 0.0f;
     if (cfg_.omega_scale <= 0.0f) cfg_.omega_scale = 1.0f;
 
-    Serial.printf("[运动学] 模型=%s 轮距=%.1fmm 轴距=%.1fmm 角速度系数=%.3f\n",
-                  cfg_.type == KIN_MECANUM ? "麦克纳姆" : "差速",
-                  cfg_.track, cfg_.wheel_base, cfg_.omega_scale);
+    // Serial.printf("[运动学] 模型=%s 轮距=%.1fmm 轴距=%.1fmm 角速度系数=%.3f\n",
+                  // cfg_.type == KIN_MECANUM ? "麦克纳姆" : "差速",
+                  // cfg_.track, cfg_.wheel_base, cfg_.omega_scale);
 
     if (cfg_.type == KIN_MECANUM && cfg_.wheel_base <= 0.0f)
         Serial.println("[运动学] ⚠️ 麦轮模式轴距为 0，原地旋转速度会错，请在配网页填写轴距");

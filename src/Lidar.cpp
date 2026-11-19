@@ -200,7 +200,7 @@ static void finishScan()
 
     // 有效点太少 → 这一圈不可信，不要拿它去污染地图
     if (valid < LIDAR_MIN_VALID_POINTS) {
-        Serial.printf("[Lidar] 本圈仅 %d 个有效点，丢弃\n", valid);
+        // Serial.printf("[Lidar] 本圈仅 %d 个有效点，丢弃\n", valid);
         return;
     }
 
@@ -228,8 +228,8 @@ static void parsePacket(const uint8_t *packet_data)
     // 第一包原样 hexdump 一次（诊断协议结构：看 LSN/角度字段是否合理）
     if (dbg_packets_ok == 1) {
         int plen = 8 + 3 * (int)lsn;
-        Serial.printf("[Lidar] 首包 LSN=%u 共%dB: ", lsn, plen);
-        for (int i = 0; i < plen && i < 48; i++) Serial.printf("%02X ", packet_data[i]);
+        // Serial.printf("[Lidar] 首包 LSN=%u 共%dB: ", lsn, plen);
+        // for (int i = 0; i < plen && i < 48; i++) Serial.printf("%02X ", packet_data[i]);
         Serial.println(plen > 48 ? " ..." : "");
     }
 
@@ -411,9 +411,9 @@ static void printByteHistogram()
         }
         if (best < 0 || best_n == 0) break;
         used[best] = true;
-        Serial.printf("[Lidar RAW]   0x%02X x%-8lu %.1f%%\n",
-                      best, (unsigned long)best_n,
-                      100.0f * (float)best_n / (float)dbg_raw_total);
+        // Serial.printf("[Lidar RAW]   0x%02X x%-8lu %.1f%%\n",
+                      // best, (unsigned long)best_n,
+                      // 100.0f * (float)best_n / (float)dbg_raw_total);
     }
 }
 
@@ -464,8 +464,8 @@ static void lidarTask(void *arg)
             start_retry_n++;
             uint8_t cmd[2] = {0xA5, (uint8_t)((start_retry_n & 1) ? 0x60 : 0x61)};
             LidarSerial.write(cmd, sizeof(cmd));
-            Serial.printf("[Lidar] 还没收到数据 → 重发启动指令 A5 %02X (第%u/%u次)\n",
-                          cmd[1], (unsigned)start_retry_n, (unsigned)LIDAR_START_RETRY_MAX);
+            // Serial.printf("[Lidar] 还没收到数据 → 重发启动指令 A5 %02X (第%u/%u次)\n",
+                          // cmd[1], (unsigned)start_retry_n, (unsigned)LIDAR_START_RETRY_MAX);
         }
 
         // 每 5 秒打印一次诊断信息
@@ -486,20 +486,20 @@ static void lidarTask(void *arg)
                 }
             }
 
-            Serial.printf("[Lidar DBG] RX=%luB 头=%02X%02X AA55=%lu 55AA=%lu 包=%lu 丢=%lu 圈=%d 有效点=%lu 就绪=%d LSN=常见%u(x%lu) 最大%u\n",
-                (unsigned long)dbg_bytes_rx, hdr_first_, hdr_second_,
-                (unsigned long)dbg_sync_aa55, (unsigned long)dbg_sync_55aa,
-                (unsigned long)dbg_packets_ok, (unsigned long)dbg_packets_bad,
-                scan_count_, (unsigned long)valid, scan_ready_ ? 1 : 0,
-                lsn_mode, (unsigned long)lsn_mode_n, dbg_lsn_max);
+            // Serial.printf("[Lidar DBG] RX=%luB 头=%02X%02X AA55=%lu 55AA=%lu 包=%lu 丢=%lu 圈=%d 有效点=%lu 就绪=%d LSN=常见%u(x%lu) 最大%u\n",
+                // (unsigned long)dbg_bytes_rx, hdr_first_, hdr_second_,
+                // (unsigned long)dbg_sync_aa55, (unsigned long)dbg_sync_55aa,
+                // (unsigned long)dbg_packets_ok, (unsigned long)dbg_packets_bad,
+                // scan_count_, (unsigned long)valid, scan_ready_ ? 1 : 0,
+                // lsn_mode, (unsigned long)lsn_mode_n, dbg_lsn_max);
 
             // 一个包都没解析出来 → 把原始字节摊开看（同步成功后不再打印）
             if (dbg_packets_ok == 0 && dbg_raw_total > 0) {
                 // 头 64 字节 + 字节分布：只打一次
                 if (!dbg_first_printed) {
                     dbg_first_printed = true;
-                    Serial.printf("[Lidar RAW] 前 %u 字节:", (unsigned)dbg_first_n);
-                    for (uint8_t i = 0; i < dbg_first_n; i++) Serial.printf(" %02X", dbg_first[i]);
+                    // Serial.printf("[Lidar RAW] 前 %u 字节:", (unsigned)dbg_first_n);
+                    // for (uint8_t i = 0; i < dbg_first_n; i++) Serial.printf(" %02X", dbg_first[i]);
                     Serial.println();
                     printByteHistogram();
                 }
@@ -516,17 +516,17 @@ static void lidarTask(void *arg)
                         }
                         if (best < 0 || best_n == 0) break;
                         gused[best] = true;
-                        Serial.printf("[Lidar RAW] 6B9377 x%lu  帧长 %d 字节 x%lu\n",
-                                      (unsigned long)raw_hdr_n, best, (unsigned long)best_n);
+                        // Serial.printf("[Lidar RAW] 6B9377 x%lu  帧长 %d 字节 x%lu\n",
+                                      // (unsigned long)raw_hdr_n, best, (unsigned long)best_n);
                     }
                 }
 
                 // 抓到的完整一帧（只打一次，用来反推协议）
                 if (raw_frame_ready) {
                     raw_frame_ready = false;
-                    Serial.printf("[Lidar RAW] 完整一帧 %u 字节:\n", (unsigned)raw_frame_n);
+                    // Serial.printf("[Lidar RAW] 完整一帧 %u 字节:\n", (unsigned)raw_frame_n);
                     for (uint8_t i = 0; i < raw_frame_n; i++) {
-                        Serial.printf("%02X ", raw_frame[i]);
+                        // Serial.printf("%02X ", raw_frame[i]);
                         if ((i & 15) == 15) Serial.println();
                     }
                     Serial.println();
@@ -559,9 +559,9 @@ static void lidarBaudSweep()
                 b1 = b0; b0 = b;
             }
         }
-        Serial.printf("[Baud] %lu: RX=%lu  AA55=%lu  6B9377=%lu\n",
-            (unsigned long)bauds[i], (unsigned long)count,
-            (unsigned long)aa55, (unsigned long)sync6b93);
+        // Serial.printf("[Baud] %lu: RX=%lu  AA55=%lu  6B9377=%lu\n",
+            // (unsigned long)bauds[i], (unsigned long)count,
+            // (unsigned long)aa55, (unsigned long)sync6b93);
     }
     Serial.println("[Lidar] === 波特率扫描结束 ===");
 }
@@ -616,9 +616,9 @@ static void autoDetectLidar()
         }
 
         uint32_t hits = n_aa55 + n_55aa;
-        Serial.printf("[Lidar]   %6lu baud: AA55=%lu  55AA=%lu\n",
-                      (unsigned long)kCandidates[i],
-                      (unsigned long)n_aa55, (unsigned long)n_55aa);
+        // Serial.printf("[Lidar]   %6lu baud: AA55=%lu  55AA=%lu\n",
+                      // (unsigned long)kCandidates[i],
+                      // (unsigned long)n_aa55, (unsigned long)n_55aa);
 
         if (hits > best_hits) {
             best_hits = hits;
@@ -635,9 +635,9 @@ static void autoDetectLidar()
     delay(20);
     LidarSerial.flush();
 
-    Serial.printf("[Lidar] 识别结果: %lu baud, 帧头 %02X %02X%s\n",
-                  (unsigned long)best_baud, hdr_first_, hdr_second_,
-                  found ? "" : "  (⚠ 没抓到有效帧头，用的是兜底值)");
+    // Serial.printf("[Lidar] 识别结果: %lu baud, 帧头 %02X %02X%s\n",
+                  // (unsigned long)best_baud, hdr_first_, hdr_second_,
+                  // found ? "" : "  (⚠ 没抓到有效帧头，用的是兜底值)");
 }
 
 void Lidar_Init()
@@ -686,9 +686,9 @@ void Lidar_Init()
             ack_p1 = b;
         }
     }
-    Serial.printf("[Lidar] 启动后 300ms 收到 %u 字节, A5-5A 应答 %u 次: ",
-                  (unsigned)ack_n, (unsigned)ack_hits);
-    for (uint8_t i = 0; i < ack_n && i < 16; i++) Serial.printf("%02X ", ack[i]);
+    // Serial.printf("[Lidar] 启动后 300ms 收到 %u 字节, A5-5A 应答 %u 次: ",
+                  // (unsigned)ack_n, (unsigned)ack_hits);
+    // for (uint8_t i = 0; i < ack_n && i < 16; i++) Serial.printf("%02X ", ack[i]);
     Serial.println();
     if (ack_hits == 0) {
         Serial.println("[Lidar] ⚠ 没看到应答：启动命令可能没送到雷达（后续会自动重发）");
@@ -706,8 +706,8 @@ void Lidar_Init()
     // 创建独立解析任务（栈 4096，优先级 2）
     xTaskCreate(lidarTask, "lidar_task", 4096, NULL, 2, NULL);
 
-    Serial.printf("[Lidar] init done, UART1 %d baud (RX=%d TX=%d)\n",
-        LIDAR_BAUDRATE, LIDAR_RX, LIDAR_TX);
+    // Serial.printf("[Lidar] init done, UART1 %d baud (RX=%d TX=%d)\n",
+        // LIDAR_BAUDRATE, LIDAR_RX, LIDAR_TX);
 }
 
 bool Lidar_isScanReady()

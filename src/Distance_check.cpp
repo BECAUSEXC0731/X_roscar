@@ -49,7 +49,7 @@ float Distance_chect()
     }
 
     float distance = duration * 0.034 / 2;
-    Serial.printf("[距离] dur=%lu  dist=%.1fcm\n", duration, distance);
+    // Serial.printf("[距离] dur=%lu  dist=%.1fcm\n", duration, distance);
 
     if (distance < 2.0 || distance > 400.0) {
         Serial.println("[距离] 超出范围");

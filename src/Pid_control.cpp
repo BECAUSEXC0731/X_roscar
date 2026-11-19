@@ -22,21 +22,21 @@
 
 
 
-#define KP1 0.25
-#define KI1 0.0
-#define KD1 0.0
+#define KP1 0.43
+#define KI1 0.06
+#define KD1 0.035
 
-#define KP2 0.25
-#define KI2 0.0
-#define KD2 0.0
+#define KP2 0.43
+#define KI2 0.06
+#define KD2 0.035
 
-#define KP3 0.15
-#define KI3 0.0
-#define KD3 0.0
+#define KP3 0.30
+#define KI3 0.03
+#define KD3 0.01
 
-#define KP4 0.240
-#define KI4 0.0
-#define KD4 0.0
+#define KP4 0.30
+#define KI4 0.03
+#define KD4 0.01
 
 
 
@@ -81,10 +81,22 @@ void Pid_controller_run(float TARGET)
 // ── 每周期最大输出变化量（缓动限幅，防止抽搐）────────
 #define SLEW_RATE  12.0f
 
+// ── 低速防反转死区 ───────────────────────────────────
+// 低速时编码器量化仍然存在，P 输出会来回反号。目标速度较低时，
+// 反向输出幅度很小时视为测量噪声，直接归零（刹车），不主动反转。
+#define LOW_SPEED_TARGET   150.0f   // mm/s，低于此目标启用防反转
+#define REVERSE_DEADBAND    10.0f   // PWM（0~100）
+
 //--------------------------------------------------PID运行------------------
 void PID_run::Pid_run_()
 {
     float raw = pid_controller[ID_].update(Velocity[ID_]);
+
+    // 低速防反转：输出与目标方向相反且幅度很小 → 清零
+    if (fabs(TARGET_) < LOW_SPEED_TARGET) {
+        if (TARGET_ > 0.0f && raw < 0.0f && raw > -REVERSE_DEADBAND) raw = 0.0f;
+        if (TARGET_ < 0.0f && raw > 0.0f && raw <  REVERSE_DEADBAND) raw = 0.0f;
+    }
 
     // 缓动限幅：本次输出不能比上次突变超过 SLEW_RATE
     float delta = raw - lastOutput_;

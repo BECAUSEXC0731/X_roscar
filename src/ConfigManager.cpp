@@ -79,9 +79,9 @@ void ConfigManager::startAP()
 
     IPAddress apIP = WiFi.softAPIP();
     Serial.println("\n========================================");
-    Serial.printf("配网模式已启动 (softAP: %s)\n", ok ? "OK" : "失败！");
+    // Serial.printf("配网模式已启动 (softAP: %s)\n", ok ? "OK" : "失败！");
     Serial.println("手机连接热点: CAR_CONFIG（无密码）");
-    Serial.printf("  打开浏览器访问: http://%s\n", apIP.toString().c_str());
+    // Serial.printf("  打开浏览器访问: http://%s\n", apIP.toString().c_str());
     Serial.println("========================================\n");
 
     server_ = new WebServer(80);
@@ -265,8 +265,8 @@ void ConfigManager::setDefaults(const char *ssid, const char *pass, const char *
         strncpy(config_.ssid,     ssid, sizeof(config_.ssid) - 1);
         strncpy(config_.password, pass, sizeof(config_.password) - 1);
         strncpy(config_.agent_ip, ip,   sizeof(config_.agent_ip) - 1);
-        Serial.printf("📋 使用默认配置: SSID=%s, Agent IP=%s\n",
-            config_.ssid, config_.agent_ip);
+        // Serial.printf("📋 使用默认配置: SSID=%s, Agent IP=%s\n",
+            // config_.ssid, config_.agent_ip);
     } else {
         Serial.println("📂 使用 NVS 中保存的配置");
     }
@@ -296,17 +296,17 @@ bool ConfigManager::saveToNVS()
 
     if (e_ssid != ESP_OK || e_pass != ESP_OK || e_ip != ESP_OK || e_cmt != ESP_OK ||
         e_kin != ESP_OK || e_trk != ESP_OK || e_wb != ESP_OK || e_wos != ESP_OK) {
-        Serial.printf("❌ 配置写入失败: ssid=%d pass=%d ip=%d kin=%d trk=%d wb=%d wos=%d commit=%d\n",
-                      (int)e_ssid, (int)e_pass, (int)e_ip, (int)e_kin,
-                      (int)e_trk, (int)e_wb, (int)e_wos, (int)e_cmt);
+        // Serial.printf("❌ 配置写入失败: ssid=%d pass=%d ip=%d kin=%d trk=%d wb=%d wos=%d commit=%d\n",
+                      // (int)e_ssid, (int)e_pass, (int)e_ip, (int)e_kin,
+                      // (int)e_trk, (int)e_wb, (int)e_wos, (int)e_cmt);
         return false;
     }
 
     // 只打印密码长度，不打印密码本身
-    Serial.printf("✅ 配置已保存到 NVS: SSID=%s, 密码长度=%u, Agent IP=%s\n",
-                  config_.ssid, (unsigned)strlen(config_.password), config_.agent_ip);
-    Serial.printf("   运动学: 模型=%u 轮距=%.1fmm 轴距=%.1fmm 角速度系数=%.3f\n",
-                  (unsigned)config_.kin_type, config_.track, config_.wheel_base, config_.omega_scale);
+    // Serial.printf("✅ 配置已保存到 NVS: SSID=%s, 密码长度=%u, Agent IP=%s\n",
+                  // config_.ssid, (unsigned)strlen(config_.password), config_.agent_ip);
+    // Serial.printf("   运动学: 模型=%u 轮距=%.1fmm 轴距=%.1fmm 角速度系数=%.3f\n",
+                  // (unsigned)config_.kin_type, config_.track, config_.wheel_base, config_.omega_scale);
     return true;
 }
 
@@ -344,10 +344,10 @@ bool ConfigManager::loadFromNVS()
     config_.agent_ip[sizeof(config_.agent_ip) - 1] = '\0';
 
     if (strlen(config_.ssid) > 0) {
-        Serial.printf("📂 从 NVS 读取配置: SSID=%s, Agent IP=%s\n",
-            config_.ssid, config_.agent_ip);
-        Serial.printf("   运动学: 模型=%u 轮距=%.1fmm 轴距=%.1fmm 角速度系数=%.3f\n",
-            (unsigned)config_.kin_type, config_.track, config_.wheel_base, config_.omega_scale);
+        // Serial.printf("📂 从 NVS 读取配置: SSID=%s, Agent IP=%s\n",
+            // config_.ssid, config_.agent_ip);
+        // Serial.printf("   运动学: 模型=%u 轮距=%.1fmm 轴距=%.1fmm 角速度系数=%.3f\n",
+            // (unsigned)config_.kin_type, config_.track, config_.wheel_base, config_.omega_scale);
         return true;
     }
     return false;

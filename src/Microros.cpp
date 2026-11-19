@@ -207,10 +207,10 @@ void micro_ros_task(void *arg)
     // ⚠️ 校验 Agent IP，无效时回退到默认值（防止 NVS 里存了损坏的 IP 导致连不上）
     if (!agent_ip.fromString(cfg.agent_ip))
     {
-        Serial.printf("[WARN] Agent IP 无效: '%s'，回退到默认 10.109.159.51\n", cfg.agent_ip);
+        // Serial.printf("[WARN] Agent IP 无效: '%s'，回退到默认 10.109.159.51\n", cfg.agent_ip);
         agent_ip.fromString("10.109.159.51");
     }
-    Serial.printf("[micro-ROS] Agent: %s:%u\n", agent_ip.toString().c_str(), agent_port);
+    // Serial.printf("[micro-ROS] Agent: %s:%u\n", agent_ip.toString().c_str(), agent_port);
     set_microros_wifi_transports(cfg.ssid, cfg.password, agent_ip, agent_port);
     delay(2000); // ⚠️ 关键：给 transport 充分时间初始化
 

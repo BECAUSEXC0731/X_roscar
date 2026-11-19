@@ -19,7 +19,8 @@
 
 void Encoder_Check();
 
-void Velocity_Check();
+// 固定 20ms 窗口测速；返回 true 表示产生了新速度（主循环据此跑 50Hz PID）
+bool Velocity_Check();
 
 void Encoder_Init();
 #endif

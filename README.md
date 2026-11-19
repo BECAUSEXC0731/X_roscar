@@ -30,9 +30,8 @@
 | 运动学 | `lib/Kinematics/` | 差速 / 麦轮正逆解（运行时按 NVS 配置切换）+ 里程计积分 |
 | micro-ROS | `src/Microros.cpp` | 独立任务：等 WiFi → 建节点 → 50ms 发布，订阅 `/cmd_vel` |
 | 姿态 | `src/MPU6050.cpp` | MPU6050 读取（含 I2C Bypass 使能） |
-| 显示 | `src/OledDisplay.cpp` | OLED：IP / 4 路轮速 / 进度条 / 动画 |
+| 显示 | `src/OledDisplay.cpp` | OLED：IP / 4 路轮速 / 进度条 / 航向角 / 运行时间 |
 | 测距 | `src/Distance_check.cpp` | HC-SR04 超声波测距 |
-| 云台 | `src/Servo.cpp` | 2 路舵机，UDP 4210 收发 `[pan, tilt]` |
 | 雷达 | `src/Lidar.cpp` | YDLIDAR X2 解析任务，发布 `/scan` |
 | 自检 | `src/SelfCheck.cpp` | 上电自检，蜂鸣器 + OLED 反馈结果 |
 

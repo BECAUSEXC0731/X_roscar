@@ -31,8 +31,8 @@ public:
     PID_run() = default;
    
 private:
-    int ID_;
-    float TARGET_;
+    int ID_ = 0;
+    float TARGET_ = 0;         // 必须初始化，低速防反转逻辑会用到
     float lastOutput_ = 0;     // 上次 PID 输出值（用于缓动限幅）
 
 public:
