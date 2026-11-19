@@ -44,6 +44,8 @@
 
 #include "WiFi.h"
 
+#include <ArduinoOTA.h>    // WiFi OTA 无线升级
+
 #include <Wire.h>          // 配网模式下直接点亮 OLED 需要
 
 My_motor my_motor[4];                   // 电机实例化
@@ -63,6 +65,13 @@ static const char DEFAULT_AGENT_IP[] = "10.136.202.51";
 
 // 正常启动等待 WiFi 的最长时间；超时自动进入配网模式（绝不无限死等）
 static const uint32_t WIFI_CONNECT_TIMEOUT_MS = 20000;
+
+// ════════════════════════════════════════════════════════════
+//  OTA 无线升级（UDP 3232）
+//  密码必须与 platformio.ini 中 [env:xc_ota] 的 upload_flags --auth= 一致
+// ════════════════════════════════════════════════════════════
+static const char OTA_HOSTNAME[] = "x_roscar";       // 局域网名：x_roscar.local
+static const char OTA_PASSWORD[] = "xroscar_ota";
 
 // ── 配网键 ──────────────────────────────────────────────────
 // 按下/松开对应的电平（极性在 PinConfig.h 里用 CFG_BUTTON_ACTIVE_LOW 切换）
@@ -100,6 +109,51 @@ static bool isCfgButtonHeld(uint32_t holdMs)
 static void stopAllMotors()
 {
     for (int id = 1; id <= 4; id++) my_motor[0].Motor_Brake(id);
+}
+
+// ── OTA 前/失败后停车：先把 PID 目标清零，再刹车 ─────────────
+// 只刹车不够：PID 目标还停在上次的 /cmd_vel 上，主循环一恢复就会重新加速
+static void otaStopAllMotion()
+{
+    for (int i = 0; i < 4; i++) run[i].Pid_setgoal(i + 1, 0);
+    stopAllMotors();
+}
+
+// ── OTA 初始化（必须 WiFi 连上之后、电机初始化之后调用）──────
+static void otaInit()
+{
+    ArduinoOTA.setHostname(OTA_HOSTNAME);
+    ArduinoOTA.setPassword(OTA_PASSWORD);
+
+    ArduinoOTA.onStart([]() {
+        otaStopAllMotion();
+        Serial.println("\n[OTA] 开始接收固件，四轮已刹车（此时车不会再响应 /cmd_vel）");
+    });
+
+    ArduinoOTA.onProgress([](unsigned int done, unsigned int total) {
+        Serial.printf("[OTA] %3u%%\r", total ? (unsigned)(done * 100u / total) : 0u);
+    });
+
+    ArduinoOTA.onEnd([]() {
+        Serial.println("\n[OTA] 写入完成，即将自动重启");
+    });
+
+    ArduinoOTA.onError([](ota_error_t err) {
+        otaStopAllMotion();
+        Serial.printf("\n[OTA] 升级失败 code=%u，已刹车，继续运行旧固件\n", (unsigned)err);
+        if (err == OTA_AUTH_ERROR)
+            Serial.println("[OTA] → 密码错误：核对 platformio.ini 的 --auth 与 OTA_PASSWORD");
+        else if (err == OTA_BEGIN_ERROR || err == OTA_CONNECT_ERROR)
+            Serial.println("[OTA] → 连接失败：核对小车 IP、电脑与小车是否同一 WiFi/网段");
+        else if (err == OTA_RECEIVE_ERROR)
+            Serial.println("[OTA] → 传输中断：信号弱或固件过大");
+        else if (err == OTA_END_ERROR)
+            Serial.println("[OTA] → 校验失败：重新上传一次");
+    });
+
+    ArduinoOTA.begin();
+    Serial.printf("[OTA] 已就绪：%s.local:3232（IP %s）\n",
+                  OTA_HOSTNAME, WiFi.localIP().toString().c_str());
 }
 
 // ── 独立点亮 OLED ───────────────────────────────────────────
@@ -176,6 +230,14 @@ void setup()
     Serial.printf("使用配置: SSID=%s, 密码长度=%u, Agent IP=%s\n",
                   cfg.ssid, (unsigned)strlen(cfg.password), cfg.agent_ip);
 
+    // ── 把 NVS 里的运动学参数交给运动学模块（差速 / 麦克纳姆）──
+    KinematicsConfig kin_cfg;
+    kin_cfg.type        = cfg.kin_type;
+    kin_cfg.track       = cfg.track;
+    kin_cfg.wheel_base  = cfg.wheel_base;
+    kin_cfg.omega_scale = cfg.omega_scale;
+    Kinematics_SetConfig(kin_cfg);
+
     xTaskCreate(micro_ros_task, "uros_task", 32768, NULL, 1, NULL); // micro-ROS 任务
 
     // ── 连接 WiFi：带超时，连不上就自动进配网，绝不无限死等 ──
@@ -235,10 +297,16 @@ void setup()
     // 初始化 STATUS 指示灯
     pinMode(STUTS, OUTPUT);
     digitalWrite(STUTS, LOW);
+
+    // ── OTA 无线升级：放在各外设初始化之后，保证升级时能正确刹车 ──
+    otaInit();
 }
 
 void loop()
 {
+    // ── OTA：必须高频调用，升级期间会在此处阻塞，PID 停摆（已刹车）──
+    ArduinoOTA.handle();
+
     // ── 配网键：运行中按下就进配网（刹车后不返回）──────────
     checkCfgButton();
 

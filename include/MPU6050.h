@@ -18,6 +18,10 @@
 #define MPU6050_h 
 
 void MPU6050_Init();
+
+// MPU6050 是否初始化成功（失败时不应把它的航向用于里程计修正）
+bool MPU6050_IsReady();
+
 void MPU6050_check();
 
 // 更新 MPU 数据（必须在读取任何角度/加速度之前调用）

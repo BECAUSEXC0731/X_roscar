@@ -14,10 +14,12 @@ h2{color:#333;text-align:center;margin-top:4px;margin-bottom:4px}
 .desc b{display:block;margin-bottom:4px}
 label{display:block;margin-top:12px;color:#555;font-size:14px;text-align:left}
 input{width:100%;padding:10px;margin:4px 0 8px 0;border:1px solid #ddd;border-radius:5px;box-sizing:border-box;font-size:14px}
+select{width:100%;padding:10px;margin:4px 0 8px 0;border:1px solid #ddd;border-radius:5px;box-sizing:border-box;font-size:14px;background:#fff}
 button{width:100%;padding:12px;background:#4CAF50;color:white;border:none;border-radius:5px;font-size:16px;cursor:pointer;margin-top:12px}
 button:hover{background:#45a049}
 .hint{color:#999;font-size:12px;margin-top:0;text-align:left}
 .footer{text-align:center;margin-top:16px;color:#aaa;font-size:12px}
+hr{border:none;border-top:1px solid #eee;margin:16px 0}
 </style>
 </head>
 <body>
@@ -25,7 +27,7 @@ button:hover{background:#45a049}
 <!-- 🖼️ 自定义图片/图标：可以用 emoji 或者 base64 小图 -->
 <div class="logo">🤖</div>
 <h2>X-roscar 小车配置</h2>
-<p class="subtitle">WiFi &amp; 通信设置</p>
+<p class="subtitle">WiFi &amp; 通信 / 运动学设置</p>
 
 <!-- 📝 自定义说明文字 -->
 <div class="desc">
@@ -33,7 +35,8 @@ button:hover{background:#45a049}
 1. 打开手机热点<br>
 2. 输入热点名称和密码<br>
 3. 输入电脑的 IP 地址<br>
-4. 点击保存，小车将自动连接
+4. 选择底盘类型并填写轮距/轴距<br>
+5. 点击保存，小车将自动连接
 </div>
 
 <form action="/save" method="POST">
@@ -46,6 +49,23 @@ button:hover{background:#45a049}
 <label>🖥️ Agent IP (电脑IP):</label>
 <input name="ip" placeholder="192.168.x.x" value="" required>
 <p class="hint">💡 查看电脑连接手机热点后分配到的 IP</p>
+
+<hr>
+<label>底盘类型:</label>
+<select name="kin_type">
+<option value="0" selected>四轮差速</option>
+<option value="1">麦克纳姆轮</option>
+</select>
+
+<label>轮距 (mm，左右轮中心距):</label>
+<input name="track" type="number" step="1" min="50" max="1000" value="165.0">
+
+<label>轴距 (mm，前后轮中心距，差速可留 0):</label>
+<input name="wheel_base" type="number" step="1" min="0" max="1000" value="0.0">
+
+<label>角速度校准系数 (1.00 = 不校准):</label>
+<input name="omega_scale" type="number" step="0.01" min="0.5" max="2" value="1.000">
+<p class="hint">原地旋转比指令转得多就调小，转不够就调大</p>
 
 <button type="submit">✅ 保存并重启</button>
 </form>

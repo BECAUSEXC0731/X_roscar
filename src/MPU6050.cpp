@@ -29,6 +29,9 @@
 #include "SelfCheck.h"   // beepBuzzer
 MPU6050 mpu(Wire);
 
+// MPU6050_Init() 的探测结果，供里程计判断能否融合航向
+static bool mpu_ready = false;
+
 
 void MPU6050_Init() {
   
@@ -43,6 +46,8 @@ void MPU6050_Init() {
     Serial.printf("MPU6050 begin 失败(status=%u)，重试 %u/3\n", status, i);
     delay(100);
   }
+
+  mpu_ready = (status == 0);
 
   if (status != 0) {
     Serial.println("❌ MPU6050 未检测到！继续启动（姿态数据无效，OLED 也可能不亮）");
@@ -93,6 +98,10 @@ void MPU6050_check() {
 // ============================================================
 void updateMPU() {
   mpu.update();
+}
+
+bool MPU6050_IsReady() {
+  return mpu_ready;
 }
 
 // ============================================================

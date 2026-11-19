@@ -22,20 +22,20 @@
 
 
 
-#define KP1 0.28
-#define KI1 0.03
+#define KP1 0.25
+#define KI1 0.0
 #define KD1 0.0
 
-#define KP2 0.254
-#define KI2 0.03
+#define KP2 0.25
+#define KI2 0.0
 #define KD2 0.0
 
-#define KP3 0.255
-#define KI3 0.03
+#define KP3 0.15
+#define KI3 0.0
 #define KD3 0.0
 
-#define KP4 0.255
-#define KI4 0.03
+#define KP4 0.240
+#define KI4 0.0
 #define KD4 0.0
 
 

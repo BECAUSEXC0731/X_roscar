@@ -54,15 +54,15 @@ sensor_msgs__msg__LaserScan msg_scan;  // 雷达扫描消息
 // 外部引用：记录最后收到 cmd_vel 的时间戳（由 main.cpp 的 loop 用于控制 STATUS LED）
 extern volatile unsigned long lastCmdReceivedMs;
 
-float out_MotorL = 0, out_MotorR = 0;
-float target_linear = 0;
-float target_angular = 0;
+float target_linear = 0;   // mm/s，前进
+float target_lateral = 0;  // mm/s，左移（麦轮有效，差速忽略）
+float target_angular = 0;  // rad/s
 
 
 // 定时器回调函数
 void timer_callback(rcl_timer_t *timer1, int64_t last_call_time)
 { //完成里程计的发布
-    odom_update();
+    odom_update(getMPUYaw(), MPU6050_IsReady());
     int64_t stamp =rmw_uros_epoch_millis();
     msg_odom.header.stamp.sec = static_cast<int32_t>(stamp / 1000);
     msg_odom.header.stamp.nanosec = static_cast<uint32_t>(stamp % 1000 )*1e6;
@@ -73,6 +73,7 @@ void timer_callback(rcl_timer_t *timer1, int64_t last_call_time)
     msg_odom.pose.pose.orientation.y =0;
     msg_odom.pose.pose.orientation.z=sin(odom.angle/2);
     msg_odom.twist.twist.linear.x = (odom.linear_speed/1000);
+    msg_odom.twist.twist.linear.y = (odom.lateral_speed/1000);
     msg_odom.twist.twist.angular.z = odom.angular_speed;
 
     if(rcl_publish(&pub_odom, &msg_odom, NULL)!=RCL_RET_OK)
@@ -159,28 +160,28 @@ void twist_callback(const void *msg_in)
     const geometry_msgs__msg__Twist *msg = (geometry_msgs__msg__Twist *)msg_in;
     // 将话题中的角速度赋值给目标值
     target_angular = msg->angular.z;
-    // 将话题中的线速度赋值给目标值
-    target_linear = msg->linear.x * 1000;
-    // 运动学逆解
-    Kinematics_down(target_linear, target_angular, &out_MotorL, &out_MotorR);
-   
-    if (fabs(target_linear) < 0.1 && fabs(target_angular) < 0.01)
+    // 将话题中的线速度换算成 mm/s（Velocity[] 的单位就是 mm/s）
+    target_linear  = msg->linear.x * 1000;
+    target_lateral = msg->linear.y * 1000;
+
+    // 运动学逆解：底盘速度 → 四个轮的轮速目标
+    float wheel_target[WHEEL_NUM] = {0};
+    Kinematics_inverse(target_linear, target_lateral, target_angular, wheel_target);
+
+    if (fabs(target_linear) < 0.1 && fabs(target_lateral) < 0.1 && fabs(target_angular) < 0.01)
     { // 收到停止指令
-        for (int i = 0; i < 4; i++)
-        {   
+        for (int i = 0; i < WHEEL_NUM; i++)
+        {
             run[i].Pid_setgoal(i + 1, 0);
         }
-         
     }
     else
     {
-        run[0].Pid_setgoal(1, out_MotorL); // 加载给电机解算后的速度
-        run[1].Pid_setgoal(2, out_MotorL);
-        run[2].Pid_setgoal(3, out_MotorR);
-        run[3].Pid_setgoal(4, out_MotorR);
+        for (int i = 0; i < WHEEL_NUM; i++)
+        {
+            run[i].Pid_setgoal(i + 1, wheel_target[i]);
+        }
     }
-
-    
 }
 
 void micro_ros_task(void *arg)

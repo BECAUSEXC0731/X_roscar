@@ -25,6 +25,11 @@ struct ConfigData {
     char ssid[32];       // 手机热点名称
     char password[64];   // 热点密码
     char agent_ip[16];   // 运行 micro_ros_agent 的电脑 IP
+    // 运动学参数（单位与 KinematicsConfig 一致）
+    uint8_t kin_type;      // 0=四轮差速 1=麦克纳姆
+    float   track;         // 轮距 mm，左右轮中心距
+    float   wheel_base;    // 轴距 mm，前后轮中心距
+    float   omega_scale;   // 角速度校准系数，1.0 = 不校准
 };
 
 class ConfigManager {
@@ -50,6 +55,7 @@ private:
     void handleNotFound();  // Web: 404
     bool saveToNVS();       // 写 NVS，返回是否成功
     bool loadFromNVS();
+    void loadKinematicsDefaults(); // 运动学参数默认值（老固件升级时 NVS 里没有这些 key）
 };
 
 extern ConfigManager configManager;
